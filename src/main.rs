@@ -1,8 +1,12 @@
 // io lib to read input and print output
 use std::io::{self, Write};
 
-mod step0_repl;
-use step0_repl::rep;
+mod printer;
+mod reader;
+mod types;
+
+mod step1_read_print;
+use step1_read_print::rep;
 
 fn main() -> io::Result<()> {
     loop {
@@ -14,6 +18,6 @@ fn main() -> io::Result<()> {
 
         io::stdin().read_line(&mut input)?;
 
-        print!("{}", rep(&input));
+        println!("{}", rep(&input.replace("\n", " ")));
     }
 }
