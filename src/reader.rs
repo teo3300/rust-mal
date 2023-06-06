@@ -1,38 +1,43 @@
-use std::collections::{BTreeMap, VecDeque};
-
-use crate::types::MalType;
+// Specyfy components in "types"
+use crate::types::*;
+// By specifying enum variants it's possible to omit namespace
+use crate::types::MalType::*;
 
 use regex::Regex;
 
 pub struct Reader {
-    tokens: VecDeque<String>,
+    tokens: Vec<String>,
+    ptr: usize,
+    depth: usize,
 }
 
 // TODO: instead of panic on missing ")" try implementing a multi line parsing
 // Status on return should always be The last element of the last opened lists
 // (append to the "last" list) while traversing
-const PAREN_ERROR: &str =
-    "Looks like you reached a dead end, did you perhaps miss any \")\" or left some extra \"(\"?";
-
 impl Reader {
-    fn new(tokens: VecDeque<String>) -> Reader {
-        Reader { tokens }
+    fn new(tokens: Vec<String>) -> Reader {
+        Reader {
+            tokens,
+            ptr: 0,
+            depth: 0,
+        }
     }
 
-    /// Returns the token at the current positioni
-    fn peek(&self) -> &str {
-        match self.tokens.get(0) {
-            Some(token) => token,
-            None => panic!("{}", PAREN_ERROR),
+    /// Returns the token at the current position
+    fn peek(&self) -> Result<String, MalErr> {
+        match self.tokens.get(self.ptr) {
+            Some(token) => Ok(token.to_string()),
+            None => Err("Unexpected EOF, Missing parenthesis?".to_string()),
         }
     }
 
     /// Returns the token at current position and increment current position
     // TODO: PLEASE USE THE PEEK FUNCTION
-    fn next(&mut self) -> String {
-        match self.tokens.pop_front() {
-            Some(token) => token,
-            None => panic!("{}", PAREN_ERROR),
+    fn next(&mut self) -> Result<String, MalErr> {
+        self.ptr += 1;
+        match self.tokens.get(self.ptr - 1) {
+            Some(token) => Ok(token.to_string()),
+            None => Err("Unexpected EOF, Missing parenthesis?".to_string()),
         }
     }
 
@@ -41,35 +46,54 @@ impl Reader {
     /// Accumulates results into a MalList
     /// NOTE: `read_list` calls `read_form` -> enable recursion
     /// (lists can contains other lists)
-    fn read_list(&mut self, terminator: &str) -> Vec<MalType> {
-        std::iter::from_fn(|| match self.peek() {
-            ")" | "]" | "}" => {
-                if terminator != self.peek() {
-                    panic!("Unexpected token: {}", self.peek())
-                }
-                self.next();
-                None
+    fn read_list(&mut self, terminator: &str) -> MalRet {
+        self.depth += 1;
+
+        self.next()?;
+
+        let mut vector = Vec::new();
+        loop {
+            let token = self.peek()?;
+            if token == terminator {
+                break;
             }
-            _ => Some(self.read_form()),
-        })
-        .collect()
+            vector.push(self.read_form()?)
+        }
+        self.next()?;
+        let ret = match terminator {
+            ")" => Ok(List(vector)),
+            "]" => Ok(Vector(vector)),
+            "}" => make_map(vector),
+            _ => Err(format!("Unknown collection terminator: {}", terminator)),
+        };
+        self.depth -= 1;
+        ret
     }
 
     /// Read atomic token and return appropriate scalar ()
-    fn read_atom(&mut self) -> MalType {
-        let token = self.next();
-        // parse the token as an integer
-        match token.parse::<i32>() {
-            // On success assign the value
-            Ok(value) => MalType::Integer(value),
-            // Otherwise assign the symbol
-            Err(_) => match token.as_str() {
-                ")" | "]" | "}" => panic!("Lone parenthesis {}", token),
-                "false" => MalType::Bool(false),
-                "true" => MalType::Bool(true),
-                "nil" => MalType::Nil,
-                _ => MalType::Symbol(token),
-            },
+    fn read_atom(&mut self) -> MalRet {
+        let token = self.next()?;
+        let re_digits = Regex::new(r"^-?[0-9]+$").unwrap();
+        match token.as_str() {
+            ")" | "]" | "}" => Err(format!("Lone parenthesis {}", token)),
+            "false" => Ok(Bool(false)),
+            "true" => Ok(Bool(true)),
+            "nil" => Ok(Nil),
+            _ => {
+                if re_digits.is_match(&token) {
+                    Ok(Int(token.parse::<isize>().unwrap()))
+                } else if token.starts_with('\"') {
+                    if token.ends_with('\"') {
+                        Ok(Str(unescape_str(&token)))
+                    } else {
+                        Err("Unterminated string, expected \"".to_string())
+                    }
+                } else if token.starts_with(':') {
+                    Ok(Keyword(token))
+                } else {
+                    Ok(Symbol(token))
+                }
+            }
         }
     }
 
@@ -78,31 +102,14 @@ impl Reader {
     /// Switch on the first character
     /// "(" -> call `read_list`
     /// otherwise  -> call `read_atom`
-    fn read_form(&mut self) -> MalType {
-        match self.peek() {
+    fn read_form(&mut self) -> MalRet {
+        let token = self.peek()?;
+        // String slice containing the whole string
+        match &token[..] {
             // Consume "(" and parse list
-            "(" => {
-                self.next();
-                MalType::List(self.read_list(")"))
-            }
-            "[" => {
-                self.next();
-                MalType::Vector(self.read_list("]"))
-            }
-            "{" => {
-                self.next();
-                // fallback to C mode for now 😎
-                let list = self.read_list("}");
-                if list.len() % 2 != 0 {
-                    panic!("Missing Map element")
-                }
-                let mut map = BTreeMap::new();
-                for i in (0..list.len()).step_by(2) {
-                    map.insert(list[i].clone(), list[i + 1].clone());
-                }
-                MalType::Map(map)
-            }
-            // read atomically
+            "(" => self.read_list(")"),
+            "[" => self.read_list("]"),
+            "{" => self.read_list("}"),
             _ => self.read_atom(),
         }
     }
@@ -112,23 +119,36 @@ impl Reader {
 /// Create anew Reader with the tokens
 /// Call read_from with the reader instance
 /// TODO: catch errors
-pub fn read_str(input: &str) -> MalType {
-    let ast = Reader::new(tokenize(input)).read_form();
-    // pretty_print(&ast, 0);
-    ast
+pub fn read_str(input: &str) -> Result<MalType, (MalErr, usize)> {
+    let tokens = tokenize(input);
+    match tokens.len() {
+        0 => Ok(Nil),
+        _ => {
+            let mut reader = Reader::new(tokens);
+            match reader.read_form() {
+                Err(err) => Err((err, reader.depth)),
+                Ok(any) => Ok(any),
+            }
+        }
+    }
 }
 
 /// Read a string and return a list of tokens in it (following regex in README)
 // Add error handling for strings that are not terminated
-fn tokenize(input: &str) -> VecDeque<String> {
-    let mut tokens = VecDeque::new();
+fn tokenize(input: &str) -> Vec<String> {
+    let mut tokens = Vec::new();
 
-    let re =
-        Regex::new(r###"[\s,]*(~@|[\[\]{}()'`~^@]|"(?:\\.|[^\\"])*"?|;.*|[^\s\[\]{}('"`,;)]*)"###)
-            .unwrap();
+    let re = Regex::new(
+        r###"[\s,]*(~@|[\[\]{}()'`~^@]|"(?:\\.|[^\\"])*"?|;.*\n|[^\s\[\]{}('"`,;)]*)"###,
+    )
+    .unwrap();
     for match_str in re.captures_iter(input) {
-        if match_str[1].len() > 0 {
-            tokens.push_back(match_str[1].to_string());
+        if !match_str[1].is_empty() {
+            // Drop comments
+            if match_str[1].starts_with(';') {
+                continue;
+            }
+            tokens.push(match_str[1].to_string());
         }
     }
 

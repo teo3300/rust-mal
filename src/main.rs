@@ -15,9 +15,34 @@ fn main() -> io::Result<()> {
         let _ = io::stdout().flush();
 
         let mut input = String::new();
+        loop {
+            // Read line to compose program inpug
+            let mut line = String::new();
+            io::stdin().read_line(&mut line)?;
 
-        io::stdin().read_line(&mut input)?;
+            // Append line to input
+            input.push_str(&line);
 
-        println!("{}", rep(&input.replace("\n", " ")));
+            // If there is nothing to evaluate skip rep
+            if input == "\n" {
+                continue;
+            }
+
+            // Perform rep on whole available input
+            match rep(&input) {
+                Ok(output) => println!("{}", output),
+                Err((err, depth)) => {
+                    if line == "\n" {
+                        println!("ERROR: {}", err);
+                    } else {
+                        print!("user> {}", "  ".repeat(depth));
+                        // Flush the prompt to appear before command
+                        let _ = io::stdout().flush();
+                        continue;
+                    }
+                }
+            }
+            break;
+        }
     }
 }

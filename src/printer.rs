@@ -1,30 +1,39 @@
+use crate::types::escape_str;
 use crate::types::MalType;
+use crate::types::MalType::*;
 
-pub fn pr_str(ast: &MalType) -> String {
+pub fn pr_str(ast: &MalType, print_readably: bool) -> String {
     match ast {
-        MalType::Nil => "nil".to_string(),
-        MalType::Symbol(sym) => sym.to_string(),
-        MalType::Integer(val) => val.to_string(),
-        MalType::Bool(val) => val.to_string(),
-        MalType::List(el) => format!(
+        Nil => "nil".to_string(),
+        Symbol(sym) | Keyword(sym) => sym.to_string(),
+        Int(val) => val.to_string(),
+        Bool(val) => val.to_string(),
+        Str(str) => {
+            if print_readably {
+                escape_str(str)
+            } else {
+                str.to_string()
+            }
+        }
+        List(el) => format!(
             "({})",
             el.iter()
-                .map(|sub| pr_str(sub))
+                .map(|e| pr_str(e, print_readably))
                 .collect::<Vec<String>>()
                 .join(" ")
         ),
         // This is truly horrible
-        MalType::Vector(el) => format!(
+        Vector(el) => format!(
             "[{}]",
             el.iter()
-                .map(|sub| pr_str(sub))
+                .map(|e| pr_str(e, print_readably))
                 .collect::<Vec<String>>()
                 .join(" ")
         ),
-        MalType::Map(el) => format!(
+        Map(el) => format!(
             "{{{}}}",
             el.iter()
-                .map(|sub| vec![pr_str(sub.0), pr_str(sub.1)].join(" "))
+                .map(|sub| vec![sub.0.to_string(), pr_str(sub.1, print_readably)].join(" "))
                 .collect::<Vec<String>>()
                 .join(" ")
         ),
