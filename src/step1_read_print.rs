@@ -17,6 +17,7 @@ fn READ(input: &str) -> MalType {
 #[allow(non_snake_case)]
 /// Evaluate the generated ast
 fn EVAL(ast: MalType) -> MalType {
+    println!("{:#?}", ast);
     ast
 }
 

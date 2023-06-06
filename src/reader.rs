@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, VecDeque};
 
 use crate::types::MalType;
 
@@ -8,6 +8,9 @@ pub struct Reader {
     tokens: VecDeque<String>,
 }
 
+// TODO: instead of panic on missing ")" try implementing a multi line parsing
+// Status on return should always be The last element of the last opened lists
+// (append to the "last" list) while traversing
 const PAREN_ERROR: &str =
     "Looks like you reached a dead end, did you perhaps miss any \")\" or left some extra \"(\"?";
 
@@ -38,21 +41,18 @@ impl Reader {
     /// Accumulates results into a MalList
     /// NOTE: `read_list` calls `read_form` -> enable recursion
     /// (lists can contains other lists)
-    fn read_list(&mut self) -> MalType {
-        MalType::List(
-            // Iterate over the the list
-            std::iter::from_fn(|| match self.peek() {
-                // consume "(" and return
-                ")" => {
-                    self.next();
-                    None
+    fn read_list(&mut self, terminator: &str) -> Vec<MalType> {
+        std::iter::from_fn(|| match self.peek() {
+            ")" | "]" | "}" => {
+                if terminator != self.peek() {
+                    panic!("Unexpected token: {}", self.peek())
                 }
-                // Add read the token recursively
-                _ => Some(self.read_form()),
-            })
-            // create vector to return
-            .collect(),
-        )
+                self.next();
+                None
+            }
+            _ => Some(self.read_form()),
+        })
+        .collect()
     }
 
     /// Read atomic token and return appropriate scalar ()
@@ -64,7 +64,10 @@ impl Reader {
             Ok(value) => MalType::Integer(value),
             // Otherwise assign the symbol
             Err(_) => match token.as_str() {
-                ")" => panic!("Invalid token \")\""),
+                ")" | "]" | "}" => panic!("Lone parenthesis {}", token),
+                "false" => MalType::Bool(false),
+                "true" => MalType::Bool(true),
+                "nil" => MalType::Nil,
                 _ => MalType::Symbol(token),
             },
         }
@@ -80,7 +83,24 @@ impl Reader {
             // Consume "(" and parse list
             "(" => {
                 self.next();
-                self.read_list()
+                MalType::List(self.read_list(")"))
+            }
+            "[" => {
+                self.next();
+                MalType::Vector(self.read_list("]"))
+            }
+            "{" => {
+                self.next();
+                // fallback to C mode for now 😎
+                let list = self.read_list("}");
+                if list.len() % 2 != 0 {
+                    panic!("Missing Map element")
+                }
+                let mut map = BTreeMap::new();
+                for i in (0..list.len()).step_by(2) {
+                    map.insert(list[i].clone(), list[i + 1].clone());
+                }
+                MalType::Map(map)
             }
             // read atomically
             _ => self.read_atom(),
@@ -88,24 +108,10 @@ impl Reader {
     }
 }
 
-#[allow(dead_code)]
-fn pretty_print(ast: &MalType, base: usize) {
-    print!("{}", "│  ".repeat(base));
-    match ast {
-        MalType::Symbol(sym) => println!("Sym: {}", sym),
-        MalType::Integer(val) => println!("Int: {}", val),
-        MalType::List(vec) => {
-            println!("List: ");
-            for el in vec {
-                pretty_print(el, base + 1);
-            }
-        }
-    }
-}
-
 /// Call `tokenize` on a string
 /// Create anew Reader with the tokens
 /// Call read_from with the reader instance
+/// TODO: catch errors
 pub fn read_str(input: &str) -> MalType {
     let ast = Reader::new(tokenize(input)).read_form();
     // pretty_print(&ast, 0);
