@@ -13,7 +13,7 @@ use crate::types::{MalErr, MalType};
 fn READ(input: &str) -> Result<Vec<MalType>, MalErr> {
     match read_str(input) {
         Ok(ast) => Ok(ast),
-        Err(err) => Err(format!("Unexpected error during READ: {}", err)),
+        Err(err) => Err(format!("@ READ: {}", err)),
     }
 }
 

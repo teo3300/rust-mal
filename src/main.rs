@@ -9,6 +9,7 @@ mod step1_read_print;
 use step1_read_print::rep;
 
 fn main() -> io::Result<()> {
+    let mut num = 0;
     loop {
         let mut input = String::new();
         loop {
@@ -20,27 +21,28 @@ fn main() -> io::Result<()> {
             let mut line = String::new();
             io::stdin().read_line(&mut line)?;
 
-            if line == "\n" {
+            input.push_str(&line);
+            if input == "\n" {
                 break;
             }
-
-            input.push_str(&line);
 
             // Perform rep on whole available input
             match rep(&input) {
                 Ok(output) => {
                     for el in output {
-                        println!("{}", el);
+                        num += 1;
+                        println!("[{}]> {}", num, el);
                     }
                 }
                 Err(err) => {
                     if line == "\n" {
-                        println!("ERROR: {}", err);
+                        num += 1;
+                        println!("; [{}]> {}", num, err);
                     } else {
                         continue;
                     }
                 }
-            }
+            };
             break;
         }
     }
