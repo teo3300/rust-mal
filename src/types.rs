@@ -2,15 +2,35 @@
 
 use std::collections::HashMap;
 
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+pub enum KeyVar {
+    Key,
+    Sym,
+    Str,
+}
+
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+pub struct KeyType {
+    pub val: String,
+    var: KeyVar,
+}
+
+pub fn map_key(var: KeyVar, val: &str) -> KeyType {
+    KeyType {
+        val: val.to_string(),
+        var,
+    }
+}
+
 // All Mal types should inherit from this
 #[derive(Debug, Clone)]
 pub enum MalType {
     List(Vec<MalType>),
     Vector(Vec<MalType>),
-    Map(HashMap<String, MalType>),
-    Symbol(String),
-    Keyword(String),
-    Str(String),
+    Map(HashMap<KeyType, MalType>),
+    Sym(KeyType),
+    Key(KeyType),
+    Str(KeyType),
     Int(isize),
     Bool(bool),
     Nil,
@@ -30,7 +50,7 @@ pub type MalErr = String;
 pub type MalArgs = Vec<MalType>;
 pub type MalRet = Result<MalType, MalErr>;
 
-use MalType::{Map, Symbol};
+use MalType::{Key, Map, Str, Sym};
 
 pub fn make_map(list: MalArgs) -> MalRet {
     if list.len() % 2 != 0 {
@@ -41,9 +61,9 @@ pub fn make_map(list: MalArgs) -> MalRet {
 
     for i in (0..list.len()).step_by(2) {
         match &list[i] {
-            Symbol(k) => {
+            Sym(k) | Key(k) | Str(k) => {
                 let v = list[i + 1].clone();
-                map.insert(k.to_string(), v);
+                map.insert(k.clone(), v);
             }
             _ => return Err(format!("Map key not valid: {:?}", list[i])),
         }

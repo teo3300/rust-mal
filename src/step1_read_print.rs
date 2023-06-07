@@ -10,27 +10,30 @@ use crate::types::{MalErr, MalType};
 
 #[allow(non_snake_case)]
 /// Read input and generate an ast
-fn READ(input: &str) -> Result<MalType, (MalErr, usize)> {
+fn READ(input: &str) -> Result<Vec<MalType>, MalErr> {
     match read_str(input) {
         Ok(ast) => Ok(ast),
-        Err((err, depth)) => Err((format!("Unexpected error during READ: {}", err), depth)),
+        Err(err) => Err(format!("Unexpected error during READ: {}", err)),
     }
 }
 
 #[allow(non_snake_case)]
 /// Evaluate the generated ast
-fn EVAL(ast: MalType) -> MalType {
-    println!("{:#?}", ast);
+fn EVAL(ast: Vec<MalType>) -> Vec<MalType> {
     ast
 }
 
 #[allow(non_snake_case)]
 /// Print out the result of the evaluation
-fn PRINT(input: MalType) -> String {
-    pr_str(&input, true)
+fn PRINT(input: Vec<MalType>) -> Vec<String> {
+    let mut ret = Vec::new();
+    for expr in input {
+        ret.push(pr_str(&expr, true))
+    }
+    ret
 }
 
-pub fn rep(input: &str) -> Result<String, (MalErr, usize)> {
+pub fn rep(input: &str) -> Result<Vec<String>, MalErr> {
     let ast = READ(input)?;
     let out = EVAL(ast);
     Ok(PRINT(out))

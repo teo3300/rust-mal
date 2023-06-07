@@ -1,6 +1,7 @@
 // Specyfy components in "types"
 use crate::types::*;
 // By specifying enum variants it's possible to omit namespace
+use crate::types::KeyVar;
 use crate::types::MalType::*;
 
 use regex::Regex;
@@ -8,7 +9,6 @@ use regex::Regex;
 pub struct Reader {
     tokens: Vec<String>,
     ptr: usize,
-    depth: usize,
 }
 
 // TODO: instead of panic on missing ")" try implementing a multi line parsing
@@ -16,11 +16,11 @@ pub struct Reader {
 // (append to the "last" list) while traversing
 impl Reader {
     fn new(tokens: Vec<String>) -> Reader {
-        Reader {
-            tokens,
-            ptr: 0,
-            depth: 0,
-        }
+        Reader { tokens, ptr: 0 }
+    }
+
+    fn avail(&self) -> bool {
+        self.ptr < self.tokens.len()
     }
 
     /// Returns the token at the current position
@@ -47,8 +47,6 @@ impl Reader {
     /// NOTE: `read_list` calls `read_form` -> enable recursion
     /// (lists can contains other lists)
     fn read_list(&mut self, terminator: &str) -> MalRet {
-        self.depth += 1;
-
         self.next()?;
 
         let mut vector = Vec::new();
@@ -60,14 +58,12 @@ impl Reader {
             vector.push(self.read_form()?)
         }
         self.next()?;
-        let ret = match terminator {
+        match terminator {
             ")" => Ok(List(vector)),
             "]" => Ok(Vector(vector)),
             "}" => make_map(vector),
             _ => Err(format!("Unknown collection terminator: {}", terminator)),
-        };
-        self.depth -= 1;
-        ret
+        }
     }
 
     /// Read atomic token and return appropriate scalar ()
@@ -84,14 +80,14 @@ impl Reader {
                     Ok(Int(token.parse::<isize>().unwrap()))
                 } else if token.starts_with('\"') {
                     if token.ends_with('\"') {
-                        Ok(Str(unescape_str(&token)))
+                        Ok(Str(map_key(KeyVar::Str, &unescape_str(&token))))
                     } else {
                         Err("Unterminated string, expected \"".to_string())
                     }
                 } else if token.starts_with(':') {
-                    Ok(Keyword(token))
+                    Ok(Key(map_key(KeyVar::Key, &token)))
                 } else {
-                    Ok(Symbol(token))
+                    Ok(Sym(map_key(KeyVar::Sym, &token)))
                 }
             }
         }
@@ -119,16 +115,20 @@ impl Reader {
 /// Create anew Reader with the tokens
 /// Call read_from with the reader instance
 /// TODO: catch errors
-pub fn read_str(input: &str) -> Result<MalType, (MalErr, usize)> {
+pub fn read_str(input: &str) -> Result<Vec<MalType>, MalErr> {
     let tokens = tokenize(input);
     match tokens.len() {
-        0 => Ok(Nil),
+        0 => Ok(vec![Nil]),
         _ => {
             let mut reader = Reader::new(tokens);
-            match reader.read_form() {
-                Err(err) => Err((err, reader.depth)),
-                Ok(any) => Ok(any),
+            let mut res = Vec::new();
+            while reader.avail() {
+                match reader.read_form() {
+                    Err(err) => return Err(err),
+                    Ok(any) => res.push(any),
+                };
             }
+            Ok(res)
         }
     }
 }
