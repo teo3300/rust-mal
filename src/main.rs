@@ -1,15 +1,21 @@
 // io lib to read input and print output
 use std::io::{self, Write};
 
+mod envs;
+mod mal_core;
 mod printer;
 mod reader;
 mod types;
 
-mod step1_read_print;
-use step1_read_print::rep;
+use envs::Env;
 
-fn main() -> io::Result<()> {
+mod step2_eval;
+use step2_eval::rep;
+
+fn main() {
     let mut num = 0;
+    let env = Env::new();
+
     loop {
         let mut input = String::new();
         loop {
@@ -19,28 +25,23 @@ fn main() -> io::Result<()> {
 
             // Read line to compose program inpug
             let mut line = String::new();
-            io::stdin().read_line(&mut line)?;
+            io::stdin().read_line(&mut line).unwrap();
 
             input.push_str(&line);
-            if input == "\n" {
-                break;
-            }
 
-            // Perform rep on whole available input
-            match rep(&input) {
-                Ok(output) => {
-                    num += 1;
-                    println!("[{}]> {}", num, output);
-                }
-                Err(err) => {
-                    if line == "\n" {
-                        num += 1;
-                        println!("; [{}]> {}", num, err);
-                    } else {
-                        continue;
+            if input != "\n" {
+                // Perform rep on whole available input
+                match rep(&input, &env) {
+                    Ok(output) => println!("[{}]> {}", num, output),
+                    Err(err) => {
+                        if line != "\n" {
+                            continue;
+                        }
+                        println!("; [{}]> Error {}", num, err);
                     }
                 }
-            };
+            }
+            num += 1;
             break;
         }
     }
