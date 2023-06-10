@@ -6,11 +6,11 @@
 
 use crate::printer::pr_str;
 use crate::reader::read_str;
-use crate::types::{MalErr, MalType};
+use crate::types::{MalRet, MalType};
 
 #[allow(non_snake_case)]
 /// Read input and generate an ast
-fn READ(input: &str) -> Result<Vec<MalType>, MalErr> {
+fn READ(input: &str) -> MalRet {
     match read_str(input) {
         Ok(ast) => Ok(ast),
         Err(err) => Err(format!("@ READ: {}", err)),
@@ -19,22 +19,18 @@ fn READ(input: &str) -> Result<Vec<MalType>, MalErr> {
 
 #[allow(non_snake_case)]
 /// Evaluate the generated ast
-fn EVAL(ast: Vec<MalType>) -> Vec<MalType> {
-    ast
+fn EVAL(ast: MalType) -> MalRet {
+    Ok(ast)
 }
 
 #[allow(non_snake_case)]
 /// Print out the result of the evaluation
-fn PRINT(input: Vec<MalType>) -> Vec<String> {
-    let mut ret = Vec::new();
-    for expr in input {
-        ret.push(pr_str(&expr, true))
-    }
-    ret
+fn PRINT(output: MalType) -> String {
+    pr_str(&output, true)
 }
 
-pub fn rep(input: &str) -> Result<Vec<String>, MalErr> {
+pub fn rep(input: &str) -> Result<String, String> {
     let ast = READ(input)?;
-    let out = EVAL(ast);
+    let out = EVAL(ast)?;
     Ok(PRINT(out))
 }

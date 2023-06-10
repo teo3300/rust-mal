@@ -29,10 +29,8 @@ fn main() -> io::Result<()> {
             // Perform rep on whole available input
             match rep(&input) {
                 Ok(output) => {
-                    for el in output {
-                        num += 1;
-                        println!("[{}]> {}", num, el);
-                    }
+                    num += 1;
+                    println!("[{}]> {}", num, output);
                 }
                 Err(err) => {
                     if line == "\n" {
