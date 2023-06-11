@@ -2,35 +2,16 @@
 
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
-pub enum KeyVar {
-    Key,
-    Sym,
-    Str,
-}
-
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
-pub struct KeyType {
-    pub val: String,
-    var: KeyVar,
-}
-
-pub fn map_key(var: KeyVar, val: &str) -> KeyType {
-    KeyType {
-        val: val.to_string(),
-        var,
-    }
-}
-
 // All Mal types should inherit from this
 #[derive(Debug, Clone)]
 pub enum MalType {
     List(Vec<MalType>),
     Vector(Vec<MalType>),
-    Map(HashMap<KeyType, MalType>),
-    Sym(KeyType),
-    Key(KeyType),
-    Str(KeyType),
+    Map(HashMap<String, MalType>),
+    Fun(fn(MalArgs) -> MalRet),
+    Sym(String),
+    Key(String),
+    Str(String),
     Int(isize),
     Bool(bool),
     Nil,
@@ -86,4 +67,21 @@ pub fn unescape_str(s: &str) -> String {
         .replace("\\\\", "\\")
         .replace("\\n", "\n")
         .replace("\\\"", "\"")
+}
+
+use MalType::Int;
+
+pub fn int_op(set: isize, f: fn(isize, isize) -> isize, args: MalArgs) -> MalRet {
+    let mut tmp: isize = set;
+    for el in args {
+        match el {
+            Int(val) => {
+                tmp = f(tmp, val);
+            }
+            _ => {
+                return Err(format!("{:?} is not a number", el));
+            }
+        }
+    }
+    Ok(Int(tmp))
 }

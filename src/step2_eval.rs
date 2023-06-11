@@ -36,6 +36,7 @@ fn PRINT(output: MalType) -> String {
 
 pub fn rep(input: &str, env: &Env) -> Result<String, String> {
     let ast = READ(input)?;
+    // println!("{:#?}", ast);
     let out = EVAL(ast, env)?;
     Ok(PRINT(out))
 }

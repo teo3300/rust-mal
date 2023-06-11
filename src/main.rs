@@ -40,8 +40,8 @@ fn main() {
                         println!("; [{}]> Error {}", num, err);
                     }
                 }
+                num += 1;
             }
-            num += 1;
             break;
         }
     }

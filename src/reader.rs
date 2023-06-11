@@ -1,7 +1,6 @@
 // Specyfy components in "types"
 use crate::types::*;
 // By specifying enum variants it's possible to omit namespace
-use crate::types::KeyVar;
 use crate::types::MalType::*;
 
 use regex::Regex;
@@ -72,11 +71,11 @@ impl Reader {
                 if Regex::new(r"^-?[0-9]+$").unwrap().is_match(tk) {
                     Ok(Int(tk.parse::<isize>().unwrap()))
                 } else if tk.starts_with('\"') {
-                    Ok(Str(map_key(KeyVar::Str, &unescape_str(tk))))
+                    Ok(Str(unescape_str(tk)))
                 } else if tk.starts_with(':') {
-                    Ok(Key(map_key(KeyVar::Key, tk)))
+                    Ok(Key(format!("ʞ{}", tk)))
                 } else {
-                    Ok(Sym(map_key(KeyVar::Sym, tk)))
+                    Ok(Sym(tk.to_string()))
                 }
             }
         }

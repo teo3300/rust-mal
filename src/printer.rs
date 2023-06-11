@@ -5,14 +5,15 @@ use crate::types::MalType::*;
 pub fn pr_str(ast: &MalType, print_readably: bool) -> String {
     match ast {
         Nil => "nil".to_string(),
-        Sym(sym) | Key(sym) => sym.val.to_string(),
+        Sym(sym) => sym.to_string(),
+        Key(sym) => sym[1..sym.len() - 1].to_string(),
         Int(val) => val.to_string(),
         Bool(val) => val.to_string(),
         Str(str) => {
             if print_readably {
-                escape_str(&str.val)
+                escape_str(str)
             } else {
-                str.val.to_string()
+                str.to_string()
             }
         }
         List(el) => format!(
@@ -33,9 +34,10 @@ pub fn pr_str(ast: &MalType, print_readably: bool) -> String {
         Map(el) => format!(
             "{{{}}}",
             el.iter()
-                .map(|sub| vec![sub.0.val.to_string(), pr_str(sub.1, print_readably)].join(" "))
+                .map(|sub| vec![sub.0.to_string(), pr_str(sub.1, print_readably)].join(" "))
                 .collect::<Vec<String>>()
                 .join(" ")
         ),
+        Fun(func) => format!("{:?}", func),
     }
 }

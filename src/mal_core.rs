@@ -1,17 +1,24 @@
 use crate::envs::Env;
 use crate::types::MalType::*;
-use crate::types::{MalRet, MalType};
+use crate::types::{MalArgs, MalRet, MalType};
 
-fn function_call(list: MalType) -> MalRet {
+fn call_func(func: &MalType, args: MalArgs) -> MalRet {
+    match func {
+        Fun(func) => func(args),
+        _ => panic!("Calling not a function"),
+    }
+}
+
+fn eval_func(list: MalType) -> MalRet {
     match list {
         List(list) => {
-            let _func = &list[0];
-            if list.len() > 1 {
-                let _ast = &list[1..list.len() - 1];
-                todo!("call: func(args)");
+            let func = &list[0];
+            let args = if list.len() > 1 {
+                &list[1..]
             } else {
-                todo!("call: func()");
-            }
+                &list[0..0]
+            };
+            call_func(func, args.to_vec())
         }
         _ => Err("YOU SHOULD NOT BE HERE".to_string()),
     }
@@ -21,10 +28,10 @@ pub fn eval(ast: MalType, env: &Env) -> MalRet {
     match &ast {
         List(list) => {
             if list.is_empty() {
-                Ok(ast)
+                Ok(Nil)
+                // Previously Ok(ast)
             } else {
-                let ev = eval_ast(ast, env)?;
-                function_call(ev)
+                eval_func(eval_ast(ast, env)?)
             }
         }
         _ => eval_ast(ast, env),
@@ -42,10 +49,10 @@ fn eval_list(list: Vec<MalType>, env: &Env) -> MalRet {
     Ok(List(ret))
 }
 
-pub fn eval_ast(ast: MalType, env: &Env) -> MalRet {
+fn eval_ast(ast: MalType, env: &Env) -> MalRet {
     match ast {
-        Sym(sym) => env.solve(sym), // resolve
+        Sym(sym) => env.solve(sym),
         List(list) => eval_list(list, env),
-        _ => Ok(ast), // Default behavior, do not resolve
+        _ => Ok(ast),
     }
 }
