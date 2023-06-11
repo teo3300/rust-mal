@@ -71,17 +71,29 @@ pub fn unescape_str(s: &str) -> String {
 
 use MalType::Int;
 
-pub fn int_op(set: isize, f: fn(isize, isize) -> isize, args: MalArgs) -> MalRet {
-    let mut tmp: isize = set;
-    for el in args {
-        match el {
-            Int(val) => {
-                tmp = f(tmp, val);
-            }
-            _ => {
-                return Err(format!("{:?} is not a number", el));
-            }
-        }
+fn if_number(val: MalType) -> Result<isize, String> {
+    match val {
+        Int(val) => Ok(val),
+        _ => Err(format!("{:?} is not a number", val)),
     }
-    Ok(Int(tmp))
+}
+
+fn int_op_rec(f: fn(isize, isize) -> isize, args: &MalArgs) -> Result<isize, String> {
+    if args.len() == 1 {
+        return if_number(args[0].clone());
+    }
+
+    // PLEASE fix this
+    let left = int_op_rec(f, &args[..args.len() - 1].to_vec())?;
+    let right = if_number(args[args.len() - 1].clone())?;
+
+    Ok(f(left, right))
+}
+
+pub fn int_op(set: isize, f: fn(isize, isize) -> isize, args: MalArgs) -> MalRet {
+    if args.is_empty() {
+        Ok(Int(set))
+    } else {
+        Ok(Int(int_op_rec(f, &args)?))
+    }
 }
