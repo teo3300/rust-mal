@@ -31,7 +31,7 @@ pub type MalErr = String;
 pub type MalArgs = Vec<MalType>;
 pub type MalRet = Result<MalType, MalErr>;
 
-use MalType::{Key, Map, Str, Sym};
+use MalType::{Key, Map, Str};
 
 pub fn make_map(list: MalArgs) -> MalRet {
     if list.len() % 2 != 0 {
@@ -42,7 +42,7 @@ pub fn make_map(list: MalArgs) -> MalRet {
 
     for i in (0..list.len()).step_by(2) {
         match &list[i] {
-            Sym(k) | Key(k) | Str(k) => {
+            Key(k) | Str(k) => {
                 let v = list[i + 1].clone();
                 map.insert(k.clone(), v);
             }

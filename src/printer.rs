@@ -6,7 +6,7 @@ pub fn pr_str(ast: &MalType, print_readably: bool) -> String {
     match ast {
         Nil => "nil".to_string(),
         Sym(sym) => sym.to_string(),
-        Key(sym) => sym[1..sym.len() - 1].to_string(),
+        Key(sym) => sym[2..].to_string(),
         Int(val) => val.to_string(),
         Bool(val) => val.to_string(),
         Str(str) => {

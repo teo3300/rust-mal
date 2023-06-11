@@ -5,7 +5,7 @@ use crate::types::{MalArgs, MalRet, MalType};
 fn call_func(func: &MalType, args: MalArgs) -> MalRet {
     match func {
         Fun(func) => func(args),
-        _ => panic!("Calling not a function"),
+        _ => Err(format!("{:?} is not a function", func)),
     }
 }
 
@@ -28,8 +28,8 @@ pub fn eval(ast: MalType, env: &Env) -> MalRet {
     match &ast {
         List(list) => {
             if list.is_empty() {
-                Ok(Nil)
-                // Previously Ok(ast)
+                // Ok(Nil) // Should be the normal behavior
+                Ok(ast)
             } else {
                 eval_func(eval_ast(ast, env)?)
             }

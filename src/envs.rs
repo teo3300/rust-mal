@@ -5,12 +5,14 @@ use crate::types::{int_op, MalArgs, MalRet, MalType};
 
 pub struct Env {
     map: HashMap<String, MalType>,
+    outer: Option<Box<Env>>,
 }
 
 impl Env {
-    pub fn new() -> Self {
+    pub fn new(outer: Option<Box<Env>>) -> Self {
         let mut env = Env {
             map: HashMap::new(),
+            outer,
         };
         env.init();
         env

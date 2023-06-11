@@ -14,7 +14,7 @@ use step2_eval::rep;
 
 fn main() {
     let mut num = 0;
-    let env = Env::new();
+    let env = Env::new(None);
 
     loop {
         let mut input = String::new();
