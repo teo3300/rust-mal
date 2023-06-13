@@ -13,8 +13,8 @@ impl Env {
         }
     }
 
-    pub fn set(&mut self, sym: &str, val: MalType) {
-        self.data.insert(sym.to_string(), val);
+    pub fn set(&mut self, sym: &str, val: &MalType) {
+        self.data.insert(sym.to_string(), val.clone());
     }
 
     pub fn get(&self, sym: &String) -> MalRet {

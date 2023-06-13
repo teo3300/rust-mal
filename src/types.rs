@@ -7,7 +7,7 @@ pub enum MalType {
     List(MalArgs),
     Vector(MalArgs),
     Map(MalMap),
-    Fun(fn(MalArgs) -> MalRet),
+    Fun(fn(&[MalType]) -> MalRet),
     Sym(String),
     Key(String),
     Str(String),
@@ -78,7 +78,7 @@ fn if_number(val: &MalType) -> Result<isize, String> {
     }
 }
 
-pub fn int_op(set: isize, f: fn(isize, isize) -> isize, args: MalArgs) -> MalRet {
+pub fn int_op(set: isize, f: fn(isize, isize) -> isize, args: &[MalType]) -> MalRet {
     if args.is_empty() {
         return Ok(Int(set));
     }
@@ -98,13 +98,13 @@ use crate::env::Env;
 use MalType::Fun;
 
 pub fn env_init(env: &mut Env) {
-    env.set("quit", Fun(|_| exit(0)));
-    env.set("+", Fun(|a: MalArgs| int_op(0, |a, b| a + b, a)));
-    env.set("-", Fun(|a: MalArgs| int_op(0, |a, b| a - b, a)));
-    env.set("*", Fun(|a: MalArgs| int_op(1, |a, b| a * b, a)));
-    env.set("/", Fun(|a: MalArgs| int_op(1, |a, b| a / b, a)));
+    env.set("quit", &Fun(|_| exit(0)));
+    env.set("+", &Fun(|a: &[MalType]| int_op(0, |a, b| a + b, a)));
+    env.set("-", &Fun(|a: &[MalType]| int_op(0, |a, b| a - b, a)));
+    env.set("*", &Fun(|a: &[MalType]| int_op(1, |a, b| a * b, a)));
+    env.set("/", &Fun(|a: &[MalType]| int_op(1, |a, b| a / b, a)));
     env.set(
         "test",
-        Fun(|_| Ok(Str("This is a test function".to_string()))),
+        &Fun(|_| Ok(Str("This is a test function".to_string()))),
     );
 }
