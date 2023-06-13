@@ -20,10 +20,10 @@ impl Reader {
 
     // May be improved
     fn get_token(&self, i: usize) -> Result<String, MalErr> {
-        match self.tokens.get(i) {
-            Some(token) => Ok(token.to_string()),
-            None => Err("Unexpected EOF".to_string()),
-        }
+        self.tokens
+            .get(i)
+            .ok_or("Unexpected EOF".to_string())
+            .cloned()
     }
 
     /// Returns the token at the current position
@@ -45,7 +45,7 @@ impl Reader {
     fn read_list(&mut self, terminator: &str) -> MalRet {
         self.next()?;
 
-        let mut vector = Vec::new();
+        let mut vector = MalArgs::new();
 
         while self.peek()? != terminator {
             vector.push(self.read_form()?)

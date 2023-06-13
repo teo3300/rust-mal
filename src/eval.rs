@@ -1,6 +1,6 @@
-use crate::envs::Env;
+use crate::env::Env;
 use crate::types::MalType::*;
-use crate::types::{MalArgs, MalRet, MalType};
+use crate::types::{MalArgs, MalMap, MalRet, MalType};
 
 fn call_func(func: &MalType, args: MalArgs) -> MalRet {
     match func {
@@ -24,35 +24,50 @@ fn eval_func(list: MalType) -> MalRet {
     }
 }
 
-pub fn eval(ast: MalType, env: &Env) -> MalRet {
+pub fn eval(ast: &MalType, env: &Env) -> MalRet {
     match &ast {
         List(list) => {
             if list.is_empty() {
                 // Ok(Nil) // Should be the normal behavior
-                Ok(ast)
+                Ok(ast.clone())
             } else {
-                eval_func(eval_ast(ast, env)?)
+                eval_func(eval_ast(ast.clone(), env)?)
             }
         }
-        _ => eval_ast(ast, env),
+        _ => eval_ast(ast.clone(), env),
     }
 }
 
-fn eval_list(list: Vec<MalType>, env: &Env) -> MalRet {
-    let mut ret = Vec::new();
+fn eval_collection(list: MalArgs, env: &Env) -> Result<MalArgs, String> {
+    let mut ret = MalArgs::new();
     for el in list {
-        match eval(el, env) {
+        match eval(&el, env) {
             Ok(val) => ret.push(val),
             Err(err) => return Err(err),
         }
     }
-    Ok(List(ret))
+    Ok(ret)
+}
+
+fn eval_map(map: MalMap, env: &Env) -> MalRet {
+    let mut ret = MalMap::new();
+
+    for (k, v) in map {
+        match eval(&v, env) {
+            Ok(res) => ret.insert(k, res),
+            Err(err) => return Err(err),
+        };
+    }
+
+    Ok(Map(ret))
 }
 
 fn eval_ast(ast: MalType, env: &Env) -> MalRet {
     match ast {
-        Sym(sym) => env.solve(sym),
-        List(list) => eval_list(list, env),
+        Sym(sym) => env.get(&sym),
+        List(list) => Ok(List(eval_collection(list, env)?)),
+        Vector(vec) => Ok(Vector(eval_collection(vec, env)?)),
+        Map(map) => eval_map(map, env),
         _ => Ok(ast),
     }
 }

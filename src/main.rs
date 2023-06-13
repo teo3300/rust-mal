@@ -1,20 +1,22 @@
 // io lib to read input and print output
 use std::io::{self, Write};
 
-mod envs;
-mod mal_core;
+mod env;
+mod eval;
 mod printer;
 mod reader;
 mod types;
+use types::env_init;
 
-use envs::Env;
+use env::Env;
 
-mod step2_eval;
-use step2_eval::rep;
+mod step3_env;
+use step3_env::rep;
 
 fn main() {
     let mut num = 0;
-    let env = Env::new(None);
+    let mut reply_env = Env::new(None);
+    env_init(&mut reply_env);
 
     loop {
         let mut input = String::new();
@@ -31,7 +33,7 @@ fn main() {
 
             if input != "\n" {
                 // Perform rep on whole available input
-                match rep(&input, &env) {
+                match rep(&input, &mut reply_env) {
                     Ok(output) => println!("[{}]> {}", num, output),
                     Err(err) => {
                         if line != "\n" {

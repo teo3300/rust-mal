@@ -1,13 +1,12 @@
-// TODO: use enums for MalTypes
-
 use std::collections::HashMap;
+use std::process::exit;
 
 // All Mal types should inherit from this
 #[derive(Debug, Clone)]
 pub enum MalType {
-    List(Vec<MalType>),
-    Vector(Vec<MalType>),
-    Map(HashMap<String, MalType>),
+    List(MalArgs),
+    Vector(MalArgs),
+    Map(MalMap),
     Fun(fn(MalArgs) -> MalRet),
     Sym(String),
     Key(String),
@@ -29,6 +28,7 @@ pub enum MalErr {
 pub type MalErr = String;
 
 pub type MalArgs = Vec<MalType>;
+pub type MalMap = HashMap<String, MalType>;
 pub type MalRet = Result<MalType, MalErr>;
 
 use MalType::{Key, Map, Str};
@@ -38,13 +38,13 @@ pub fn make_map(list: MalArgs) -> MalRet {
         return Err("Map length is odd: missing value".to_string());
     }
 
-    let mut map = HashMap::new();
+    let mut map = MalMap::new();
 
     for i in (0..list.len()).step_by(2) {
         match &list[i] {
             Key(k) | Str(k) => {
-                let v = list[i + 1].clone();
-                map.insert(k.clone(), v);
+                let v = &list[i + 1];
+                map.insert(k.to_string(), v.clone());
             }
             _ => return Err(format!("Map key not valid: {:?}", list[i])),
         }
@@ -92,4 +92,19 @@ pub fn int_op(set: isize, f: fn(isize, isize) -> isize, args: MalArgs) -> MalRet
     }
 
     Ok(Int(left))
+}
+
+use crate::env::Env;
+use MalType::Fun;
+
+pub fn env_init(env: &mut Env) {
+    env.set("quit", Fun(|_| exit(0)));
+    env.set("+", Fun(|a: MalArgs| int_op(0, |a, b| a + b, a)));
+    env.set("-", Fun(|a: MalArgs| int_op(0, |a, b| a - b, a)));
+    env.set("*", Fun(|a: MalArgs| int_op(1, |a, b| a * b, a)));
+    env.set("/", Fun(|a: MalArgs| int_op(1, |a, b| a / b, a)));
+    env.set(
+        "test",
+        Fun(|_| Ok(Str("This is a test function".to_string()))),
+    );
 }

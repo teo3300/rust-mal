@@ -21,7 +21,7 @@ fn READ(input: &str) -> MalRet {
 
 #[allow(non_snake_case)]
 /// Evaluate the generated ast
-fn EVAL(ast: MalType, env: &Env) -> MalRet {
+fn EVAL(ast: MalType, env: &mut Env) -> MalRet {
     match eval(&ast, env) {
         Ok(ast) => Ok(ast),
         Err(err) => Err(format!("@ EVAL: {}", err)),
@@ -34,7 +34,7 @@ fn PRINT(output: MalType) -> String {
     pr_str(&output, true)
 }
 
-pub fn rep(input: &str, env: &Env) -> Result<String, String> {
+pub fn rep(input: &str, env: &mut Env) -> Result<String, String> {
     let ast = READ(input)?;
     // println!("{:#?}", ast);
     let out = EVAL(ast, env)?;
