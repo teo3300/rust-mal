@@ -1,1 +1,7 @@
 /target
+
+# vim save
+src/#*
+
+# emacs save
+src/*~
