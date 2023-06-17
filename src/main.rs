@@ -6,17 +6,14 @@ mod eval;
 mod printer;
 mod reader;
 mod types;
-use types::env_init;
-
-use env::Env;
+use env::env_init;
 
 mod step3_env;
 use step3_env::rep;
 
 fn main() {
     let mut num = 0;
-    let mut reply_env = Env::new(None);
-    env_init(&mut reply_env);
+    let mut reply_env = env_init();
 
     loop {
         let mut input = String::new();
@@ -25,7 +22,7 @@ fn main() {
             // Flush the prompt to appear before command
             let _ = io::stdout().flush();
 
-            // Read line to compose program inpug
+            // Read line to compose program input
             let mut line = String::new();
             io::stdin().read_line(&mut line).unwrap();
 

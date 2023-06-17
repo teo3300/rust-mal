@@ -12,33 +12,66 @@ fn call_func(func: &MalType, args: &[MalType]) -> MalRet {
 fn eval_func(list: &MalType) -> MalRet {
     match list {
         List(list) => {
-            let func = &list[0];
-            let args = if list.len() > 1 {
-                &list[1..]
-            } else {
-                &list[0..0]
-            };
+            let (func, args) = car_cdr(list);
             call_func(func, args)
         }
-        _ => Err("YOU SHOULD NOT BE HERE".to_string()),
+        _ => todo!("Yep! I hate it"),
     }
 }
 
-pub fn eval(ast: &MalType, env: &Env) -> MalRet {
-    match &ast {
-        List(list) => {
-            if list.is_empty() {
-                // Ok(Nil) // Should be the normal behavior
-                Ok(ast.clone())
-            } else {
-                eval_func(&eval_ast(ast, env)?)
+fn car_cdr(list: &[MalType]) -> (&MalType, &[MalType]) {
+    (
+        &list[0],
+        if list.len() > 1 {
+            &list[1..]
+        } else {
+            &list[0..0]
+        },
+    )
+}
+
+fn def_bang(list: &[MalType], env: &mut Env) -> MalRet {
+    match list.len() {
+        2 => match &list[0] {
+            Sym(sym) => {
+                let cdr = eval(&list[1], env)?;
+                env.set(sym.as_str(), &cdr);
+                Ok(cdr)
             }
-        }
+            _ => Err(format!(
+                "Assigning {:?} to {:?}, which is not a symbol",
+                &list[1], &list[0]
+            )),
+        },
+        _ => Err("def! macro has too many arguments, may be less strict in future".to_string()),
+    }
+}
+
+fn apply(list: &MalArgs, env: &mut Env) -> MalRet {
+    let (car, cdr) = car_cdr(list);
+    match car {
+        Sym(sym) => match sym.as_str() {
+            "def!" => def_bang(cdr, env), // already remove the def
+            "let*" => todo!("set new environment and add definitions to it"),
+            // default if no match
+            _ => eval_func(&eval_ast(&List(list.to_vec()), env)?),
+            // Hate this line, should not need to create a whole new vector
+        },
+        _ => Err("First element not a symbol".to_string()),
+    }
+}
+
+pub fn eval(ast: &MalType, env: &mut Env) -> MalRet {
+    match &ast {
+        List(list) => match list.len() {
+            0 => Ok(ast.clone()),
+            _ => apply(list, env),
+        },
         _ => eval_ast(ast, env),
     }
 }
 
-fn eval_collection(list: &MalArgs, env: &Env) -> Result<MalArgs, String> {
+fn eval_collection(list: &MalArgs, env: &mut Env) -> Result<MalArgs, String> {
     let mut ret = MalArgs::new();
     for el in list {
         match eval(el, env) {
@@ -49,7 +82,7 @@ fn eval_collection(list: &MalArgs, env: &Env) -> Result<MalArgs, String> {
     Ok(ret)
 }
 
-fn eval_map(map: &MalMap, env: &Env) -> MalRet {
+fn eval_map(map: &MalMap, env: &mut Env) -> MalRet {
     let mut ret = MalMap::new();
 
     for (k, v) in map {
@@ -62,7 +95,7 @@ fn eval_map(map: &MalMap, env: &Env) -> MalRet {
     Ok(Map(ret))
 }
 
-fn eval_ast(ast: &MalType, env: &Env) -> MalRet {
+fn eval_ast(ast: &MalType, env: &mut Env) -> MalRet {
     match ast {
         Sym(sym) => env.get(sym),
         List(list) => Ok(List(eval_collection(list, env)?)),
