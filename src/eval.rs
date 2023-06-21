@@ -56,24 +56,21 @@ fn let_star(list: &[MalType], env: &Env) -> MalRet {
         List(list) if list.len() % 2 == 0 => {
             // TODO: Find a way to avoid index looping that is ugly
             for i in (0..list.len()).step_by(2) {
-                match &list[i] {
-                    Sym(_) => def_bang(&list[i..i + 2], &mut inner_env)?,
-                    _ => return Err(format!("Map key not valid: {:?}", list[i])),
-                };
+                def_bang(&list[i..i + 2], &mut inner_env)?;
             }
             eval(&cdr[0], &mut inner_env)
         }
-        _ => Err("First argument of let* must be an even-length list".to_string()),
+        _ => Err("First argument of let* must be a list of pair definitions".to_string()),
     }
 }
 
 fn apply(list: &MalArgs, env: &mut Env) -> MalRet {
     let (car, cdr) = car_cdr(list);
     match car {
-        Sym(sym) if sym == "def!" => def_bang(cdr, env), // already remove the def
+        Sym(sym) if sym == "def!" => def_bang(cdr, env),
         Sym(sym) if sym == "let*" => let_star(cdr, env),
         Sym(_) => eval_func(&eval_ast(&List(list.to_vec()), env)?),
-        _ => Err("First element not a symbol".to_string()),
+        _ => Err(format!("{:?} is not a symbol", car)),
     }
 }
 
@@ -88,24 +85,16 @@ pub fn eval(ast: &MalType, env: &mut Env) -> MalRet {
 fn eval_collection(list: &MalArgs, env: &mut Env) -> Result<MalArgs, String> {
     let mut ret = MalArgs::new();
     for el in list {
-        match eval(el, env) {
-            Ok(val) => ret.push(val),
-            Err(err) => return Err(err),
-        }
+        ret.push(eval(el, env)?);
     }
     Ok(ret)
 }
 
 fn eval_map(map: &MalMap, env: &mut Env) -> MalRet {
     let mut ret = MalMap::new();
-
     for (k, v) in map {
-        match eval(v, env) {
-            Ok(res) => ret.insert(k.to_string(), res),
-            Err(err) => return Err(err),
-        };
+        ret.insert(k.to_string(), eval(v, env)?);
     }
-
     Ok(Map(ret))
 }
 
