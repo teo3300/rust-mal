@@ -43,30 +43,44 @@ fn def_bang(list: &[MalType], env: &mut Env) -> MalRet {
                 &list[1], &list[0]
             )),
         },
-        _ => Err("def! macro has too many arguments, may be less strict in future".to_string()),
+        _ => Err("def! macro needs 2 arguments".to_string()),
+    }
+}
+
+fn let_star(list: &[MalType], env: &Env) -> MalRet {
+    // Create the inner environment
+    let mut inner_env = Env::new(Some(Box::new(env.clone())));
+    // change the inner environment
+    let (car, cdr) = car_cdr(list);
+    match car {
+        List(list) if list.len() % 2 == 0 => {
+            // TODO: Find a way to avoid index looping that is ugly
+            for i in (0..list.len()).step_by(2) {
+                match &list[i] {
+                    Sym(_) => def_bang(&list[i..i + 2], &mut inner_env)?,
+                    _ => return Err(format!("Map key not valid: {:?}", list[i])),
+                };
+            }
+            eval(&cdr[0], &mut inner_env)
+        }
+        _ => Err("First argument of let* must be an even-length list".to_string()),
     }
 }
 
 fn apply(list: &MalArgs, env: &mut Env) -> MalRet {
     let (car, cdr) = car_cdr(list);
     match car {
-        Sym(sym) => match sym.as_str() {
-            "def!" => def_bang(cdr, env), // already remove the def
-            "let*" => todo!("set new environment and add definitions to it"),
-            // default if no match
-            _ => eval_func(&eval_ast(&List(list.to_vec()), env)?),
-            // Hate this line, should not need to create a whole new vector
-        },
+        Sym(sym) if sym == "def!" => def_bang(cdr, env), // already remove the def
+        Sym(sym) if sym == "let*" => let_star(cdr, env),
+        Sym(_) => eval_func(&eval_ast(&List(list.to_vec()), env)?),
         _ => Err("First element not a symbol".to_string()),
     }
 }
 
 pub fn eval(ast: &MalType, env: &mut Env) -> MalRet {
     match &ast {
-        List(list) => match list.len() {
-            0 => Ok(ast.clone()),
-            _ => apply(list, env),
-        },
+        List(list) if list.is_empty() => Ok(ast.clone()),
+        List(list) if !list.is_empty() => apply(list, env),
         _ => eval_ast(ast, env),
     }
 }

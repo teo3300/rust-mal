@@ -29,6 +29,7 @@ macro_rules! env_init {
     };
 }
 
+#[derive(Clone)]
 pub struct Env {
     data: MalMap,
     outer: Option<Box<Env>>,
