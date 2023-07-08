@@ -58,7 +58,12 @@ fn let_star(list: &[MalType], env: &Env) -> MalRet {
             for i in (0..list.len()).step_by(2) {
                 def_bang(&list[i..i + 2], &mut inner_env)?;
             }
-            eval(&cdr[0], &mut inner_env)
+            if cdr.is_empty() {
+                // TODO: check if it exists a better way to do this
+                Ok(Nil)
+            } else {
+                eval(&cdr[0], &mut inner_env)
+            }
         }
         _ => Err("First argument of let* must be a list of pair definitions".to_string()),
     }
