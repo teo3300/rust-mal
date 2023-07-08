@@ -66,9 +66,9 @@ pub fn env_init() -> Env {
     env_init!(None,
               "test" => Fun(|_| Ok(Str("This is a test function".to_string()))),
               "quit" => Fun(|_| {println!("Bye!"); exit(0)}),
-              "+" =>    Fun(|a| int_op(0, |a, b| a + b, a)),
-              "-" =>    Fun(|a| int_op(0, |a, b| a - b, a)),
-              "*" =>    Fun(|a| int_op(1, |a, b| a * b, a)),
-              "/" =>    Fun(|a| int_op(1, |a, b| a / b, a))
+              "+"    => Fun(|a| int_op(0, |a, b| a + b, a)),
+              "-"    => Fun(|a| int_op(0, |a, b| a - b, a)),
+              "*"    => Fun(|a| int_op(1, |a, b| a * b, a)),
+              "/"    => Fun(|a| int_op(1, |a, b| a / b, a))
     )
 }

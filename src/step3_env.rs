@@ -13,19 +13,13 @@ use crate::types::{MalRet, MalType};
 #[allow(non_snake_case)]
 /// Read input and generate an ast
 fn READ(input: &str) -> MalRet {
-    match read_str(input) {
-        Ok(ast) => Ok(ast),
-        Err(err) => Err(format!("@ READ: {}", err)),
-    }
+    read_str(input).map_err(|err| format!("@ READ: {}", err))
 }
 
 #[allow(non_snake_case)]
 /// Evaluate the generated ast
 fn EVAL(ast: MalType, env: &mut Env) -> MalRet {
-    match eval(&ast, env) {
-        Ok(ast) => Ok(ast),
-        Err(err) => Err(format!("@ EVAL: {}", err)),
-    }
+    eval(&ast, env).map_err(|err| format!("@ EVAL: {}", err))
 }
 
 #[allow(non_snake_case)]
