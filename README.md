@@ -1,6 +1,6 @@
 # rust-mal
 
-Trying and implementing [mal](github.com/kanaka/mal) project from [kanaka](github.com/kanaka) in Rust
+Trying and implementing [mal](https://github.com/kanaka/mal) project from [kanaka](https://github.com/kanaka) in Rust
 
 ## Why
 
