@@ -1,4 +1,5 @@
-use crate::types::{MalMap, MalRet, MalType};
+use crate::types::{comparison_op, MalType::*};
+use crate::types::{MalArgs, MalMap, MalRet, MalType};
 
 // This is the first time I implement a macro, and I'm copying it
 // so I will comment this a LOT
@@ -43,6 +44,24 @@ impl Env {
         }
     }
 
+    pub fn init(&mut self, binds: MalArgs, exprs: MalArgs) -> Result<&mut Self, String> {
+        if binds.len() != exprs.len() {
+            return Err("Env init with unmatched length".to_string());
+        } // TODO: May be possible to leave this be and not set additional elements at all
+        for (bind, expr) in binds.iter().zip(exprs.iter()) {
+            match bind {
+                Sym(sym) => self.set(sym, expr),
+                _ => {
+                    return Err(format!(
+                        "Initializing environment: {:?} is not a symbol",
+                        bind
+                    ))
+                }
+            }
+        }
+        Ok(self)
+    }
+
     pub fn set(&mut self, sym: &str, val: &MalType) {
         self.data.insert(sym.to_string(), val.clone());
     }
@@ -58,7 +77,7 @@ impl Env {
     }
 }
 
-use crate::types::int_op;
+use crate::types::arithmetic_op;
 use crate::types::MalType::{Fun, Str};
 use std::process::exit;
 
@@ -66,9 +85,14 @@ pub fn env_init() -> Env {
     env_init!(None,
               "test" => Fun(|_| Ok(Str("This is a test function".to_string()))),
               "quit" => Fun(|_| {println!("Bye!"); exit(0)}),
-              "+"    => Fun(|a| int_op(0, |a, b| a + b, a)),
-              "-"    => Fun(|a| int_op(0, |a, b| a - b, a)),
-              "*"    => Fun(|a| int_op(1, |a, b| a * b, a)),
-              "/"    => Fun(|a| int_op(1, |a, b| a / b, a))
+              "+"    => Fun(|a| arithmetic_op(0, |a, b| a + b, a)),
+              "-"    => Fun(|a| arithmetic_op(0, |a, b| a - b, a)),
+              "*"    => Fun(|a| arithmetic_op(1, |a, b| a * b, a)),
+              "/"    => Fun(|a| arithmetic_op(1, |a, b| a / b, a)),
+              "="    => Fun(|a| comparison_op(|a, b| a == b, a)),
+              ">"    => Fun(|a| comparison_op(|a, b| a >  b, a)),
+              "<"    => Fun(|a| comparison_op(|a, b| a >  b, a)),
+              ">="   => Fun(|a| comparison_op(|a, b| a >= b, a)),
+              "<="   => Fun(|a| comparison_op(|a, b| a <= b, a))
     )
 }

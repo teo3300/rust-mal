@@ -68,6 +68,18 @@ pub fn unescape_str(s: &str) -> String {
         .replace("\\\"", "\"")
 }
 
+/// Extract the car and cdr from a list
+pub fn car_cdr(list: &[MalType]) -> (&MalType, &[MalType]) {
+    (
+        &list[0],
+        if list.len() > 1 {
+            &list[1..]
+        } else {
+            &list[0..0]
+        },
+    )
+}
+
 use MalType::Int;
 
 fn if_number(val: &MalType) -> Result<isize, String> {
@@ -77,7 +89,7 @@ fn if_number(val: &MalType) -> Result<isize, String> {
     }
 }
 
-pub fn int_op(set: isize, f: fn(isize, isize) -> isize, args: &[MalType]) -> MalRet {
+pub fn arithmetic_op(set: isize, f: fn(isize, isize) -> isize, args: &[MalType]) -> MalRet {
     if args.is_empty() {
         return Ok(Int(set));
     }
@@ -91,4 +103,24 @@ pub fn int_op(set: isize, f: fn(isize, isize) -> isize, args: &[MalType]) -> Mal
     }
 
     Ok(Int(left))
+}
+
+use MalType::{Bool, Nil};
+
+pub fn comparison_op(f: fn(isize, isize) -> bool, args: &[MalType]) -> MalRet {
+    match args.len() {
+        0 => Err("Comparison requires at least 1 argument".to_string()),
+        _ => {
+            let (left, rights) = car_cdr(args);
+            let mut left = if_number(left)?;
+            for right in rights {
+                let right = if_number(right)?;
+                if !f(left, right) {
+                    return Ok(Nil);
+                }
+                left = right;
+            }
+            Ok(Bool(true))
+        }
+    }
 }

@@ -1,4 +1,5 @@
 use crate::env::Env;
+use crate::types::car_cdr;
 use crate::types::MalType::*;
 use crate::types::{MalArgs, MalMap, MalRet, MalType};
 
@@ -9,27 +10,20 @@ fn call_func(func: &MalType, args: &[MalType]) -> MalRet {
     }
 }
 
+/// Resolve the first element of the list as the function name and call it
+/// with the other elements as arguments
 fn eval_func(list: &MalType) -> MalRet {
     match list {
         List(list) => {
             let (func, args) = car_cdr(list);
             call_func(func, args)
         }
-        _ => todo!("Yep! I hate it"),
+        _ => todo!("This should never happen, if you see this message I probably broke the code"),
     }
 }
 
-fn car_cdr(list: &[MalType]) -> (&MalType, &[MalType]) {
-    (
-        &list[0],
-        if list.len() > 1 {
-            &list[1..]
-        } else {
-            &list[0..0]
-        },
-    )
-}
-
+/// def! special form:
+///     Evaluate the second expression and assign it to the first symbol
 fn def_bang(list: &[MalType], env: &mut Env) -> MalRet {
     match list.len() {
         2 => match &list[0] {
@@ -47,6 +41,9 @@ fn def_bang(list: &[MalType], env: &mut Env) -> MalRet {
     }
 }
 
+/// let* special form:
+///     Create a temporary inner environment, assigning pair of elements in
+///     the first list and returning the evaluation of the second expression
 fn let_star(list: &[MalType], env: &Env) -> MalRet {
     // Create the inner environment
     let mut inner_env = Env::new(Some(Box::new(env.clone())));
@@ -69,16 +66,49 @@ fn let_star(list: &[MalType], env: &Env) -> MalRet {
     }
 }
 
+/// do special form:
+///     Evaluate all the elements in a list using eval_ast and return the
+///     result of the last evaluation
+fn do_form(list: &[MalType], env: &mut Env) -> MalRet {
+    let mut last_ret = Nil;
+    for element in list.iter() {
+        last_ret = eval_ast(element, env)?;
+        // TODO: may use just "eval" to allow other expressions
+    }
+    Ok(last_ret)
+}
+
+fn if_form(list: &[MalType], env: &mut Env) -> MalRet {
+    if !(2..=3).contains(&list.len()) {
+        return Err("Wrong number of arguments".to_string());
+    }
+    let (cond, branches) = car_cdr(list);
+    match eval(cond, env)? {
+        Nil | Bool(false) => match branches.len() {
+            1 => Ok(Nil),
+            _ => eval(&branches[1], env),
+        },
+        _ => eval(&branches[0], env),
+    }
+}
+
+/// Intermediate function to discern special forms from defined symbols
 fn apply(list: &MalArgs, env: &mut Env) -> MalRet {
     let (car, cdr) = car_cdr(list);
     match car {
         Sym(sym) if sym == "def!" => def_bang(cdr, env),
         Sym(sym) if sym == "let*" => let_star(cdr, env),
+        Sym(sym) if sym == "do" => do_form(cdr, env),
+        Sym(sym) if sym == "if" => if_form(cdr, env),
+        // Filter out special forms
         Sym(_) => eval_func(&eval_ast(&List(list.to_vec()), env)?),
         _ => Err(format!("{:?} is not a symbol", car)),
     }
 }
 
+/// Switch ast evaluation depending on it being a list or not and return the
+/// result of the evaluation, this function calls "eval_ast" to recursively
+/// evaluate asts
 pub fn eval(ast: &MalType, env: &mut Env) -> MalRet {
     match &ast {
         List(list) if list.is_empty() => Ok(ast.clone()),
@@ -87,6 +117,7 @@ pub fn eval(ast: &MalType, env: &mut Env) -> MalRet {
     }
 }
 
+/// Separetely evaluate all elements in a collection (list or vector)
 fn eval_collection(list: &MalArgs, env: &mut Env) -> Result<MalArgs, String> {
     let mut ret = MalArgs::new();
     for el in list {
@@ -95,6 +126,7 @@ fn eval_collection(list: &MalArgs, env: &mut Env) -> Result<MalArgs, String> {
     Ok(ret)
 }
 
+/// Evaluate the values of a map
 fn eval_map(map: &MalMap, env: &mut Env) -> MalRet {
     let mut ret = MalMap::new();
     for (k, v) in map {
@@ -103,6 +135,7 @@ fn eval_map(map: &MalMap, env: &mut Env) -> MalRet {
     Ok(Map(ret))
 }
 
+/// Eval the provided ast
 fn eval_ast(ast: &MalType, env: &mut Env) -> MalRet {
     match ast {
         Sym(sym) => env.get(sym),
