@@ -1,4 +1,4 @@
-use crate::types::{comparison_op, MalType::*};
+use crate::types::MalType::*;
 use crate::types::{MalArgs, MalMap, MalRet, MalType};
 
 // This is the first time I implement a macro, and I'm copying it
@@ -77,8 +77,8 @@ impl Env {
     }
 }
 
-use crate::types::arithmetic_op;
 use crate::types::MalType::{Fun, Str};
+use crate::types::{arithmetic_op, comparison_op};
 use std::process::exit;
 
 pub fn env_init() -> Env {

@@ -24,7 +24,7 @@ fn eval_func(list: &MalType) -> MalRet {
 
 /// def! special form:
 ///     Evaluate the second expression and assign it to the first symbol
-fn def_bang(list: &[MalType], env: &mut Env) -> MalRet {
+fn def_bang_form(list: &[MalType], env: &mut Env) -> MalRet {
     match list.len() {
         2 => match &list[0] {
             Sym(sym) => {
@@ -33,18 +33,18 @@ fn def_bang(list: &[MalType], env: &mut Env) -> MalRet {
                 Ok(cdr)
             }
             _ => Err(format!(
-                "Assigning {:?} to {:?}, which is not a symbol",
+                "def! Assigning {:?} to {:?}, which is not a symbol",
                 &list[1], &list[0]
             )),
         },
-        _ => Err("def! macro needs 2 arguments".to_string()),
+        _ => Err("def! form: needs 2 arguments".to_string()),
     }
 }
 
 /// let* special form:
 ///     Create a temporary inner environment, assigning pair of elements in
 ///     the first list and returning the evaluation of the second expression
-fn let_star(list: &[MalType], env: &Env) -> MalRet {
+fn let_star_form(list: &[MalType], env: &Env) -> MalRet {
     // Create the inner environment
     let mut inner_env = Env::new(Some(Box::new(env.clone())));
     // change the inner environment
@@ -53,7 +53,7 @@ fn let_star(list: &[MalType], env: &Env) -> MalRet {
         List(list) if list.len() % 2 == 0 => {
             // TODO: Find a way to avoid index looping that is ugly
             for i in (0..list.len()).step_by(2) {
-                def_bang(&list[i..i + 2], &mut inner_env)?;
+                def_bang_form(&list[i..i + 2], &mut inner_env)?;
             }
             if cdr.is_empty() {
                 // TODO: check if it exists a better way to do this
@@ -70,17 +70,18 @@ fn let_star(list: &[MalType], env: &Env) -> MalRet {
 ///     Evaluate all the elements in a list using eval_ast and return the
 ///     result of the last evaluation
 fn do_form(list: &[MalType], env: &mut Env) -> MalRet {
-    let mut last_ret = Nil;
-    for element in list.iter() {
-        last_ret = eval_ast(element, env)?;
-        // TODO: may use just "eval" to allow other expressions
+    if list.is_empty() {
+        return Err("do form: provide a list as argument".to_string());
     }
-    Ok(last_ret)
+    match eval_ast(&list[0], env)? {
+        List(list) => Ok(list.last().unwrap_or(&Nil).clone()),
+        _ => Err("do form: argument must be a list".to_string()),
+    }
 }
 
 fn if_form(list: &[MalType], env: &mut Env) -> MalRet {
     if !(2..=3).contains(&list.len()) {
-        return Err("Wrong number of arguments".to_string());
+        return Err("if form: number of arguments".to_string());
     }
     let (cond, branches) = car_cdr(list);
     match eval(cond, env)? {
@@ -96,8 +97,8 @@ fn if_form(list: &[MalType], env: &mut Env) -> MalRet {
 fn apply(list: &MalArgs, env: &mut Env) -> MalRet {
     let (car, cdr) = car_cdr(list);
     match car {
-        Sym(sym) if sym == "def!" => def_bang(cdr, env),
-        Sym(sym) if sym == "let*" => let_star(cdr, env),
+        Sym(sym) if sym == "def!" => def_bang_form(cdr, env),
+        Sym(sym) if sym == "let*" => let_star_form(cdr, env),
         Sym(sym) if sym == "do" => do_form(cdr, env),
         Sym(sym) if sym == "if" => if_form(cdr, env),
         // Filter out special forms
