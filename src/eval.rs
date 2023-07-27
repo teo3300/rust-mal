@@ -1,3 +1,4 @@
+use crate::env::env_binds;
 use crate::env::Env;
 use crate::types::car_cdr;
 use crate::types::MalType::*;
@@ -6,6 +7,19 @@ use crate::types::{MalArgs, MalMap, MalRet, MalType};
 fn call_func(func: &MalType, args: &[MalType]) -> MalRet {
     match func {
         Fun(func) => func(args),
+        MalFun {
+            eval,
+            params,
+            ast,
+            env,
+        } => {
+            let mut inner_env = env_binds(env, &**params, args)?;
+            let mut ret = Ok(Nil);
+            for el in ast.iter() {
+                ret = eval(el, &mut inner_env);
+            }
+            ret
+        }
         _ => Err(format!("{:?} is not a function", func)),
     }
 }
@@ -93,6 +107,19 @@ fn if_form(list: &[MalType], env: &mut Env) -> MalRet {
     }
 }
 
+fn fn_star_form(list: &[MalType], env: &Env) -> MalRet {
+    if list.is_empty() {
+        return Err("fn* form: specify lambda arguments".to_string());
+    }
+    let (binds, exprs) = car_cdr(list);
+    Ok(MalFun {
+        eval: eval,
+        params: Box::new(binds.clone()),
+        ast: Box::new(exprs.to_vec()),
+        env: env.clone(),
+    })
+}
+
 /// Intermediate function to discern special forms from defined symbols
 fn apply(list: &MalArgs, env: &mut Env) -> MalRet {
     let (car, cdr) = car_cdr(list);
@@ -101,9 +128,9 @@ fn apply(list: &MalArgs, env: &mut Env) -> MalRet {
         Sym(sym) if sym == "let*" => let_star_form(cdr, env),
         Sym(sym) if sym == "do" => do_form(cdr, env),
         Sym(sym) if sym == "if" => if_form(cdr, env),
+        Sym(sym) if sym == "fn*" => fn_star_form(cdr, env),
         // Filter out special forms
-        Sym(_) => eval_func(&eval_ast(&List(list.to_vec()), env)?),
-        _ => Err(format!("{:?} is not a symbol", car)),
+        _ => eval_func(&eval_ast(&List(list.to_vec()), env)?),
     }
 }
 

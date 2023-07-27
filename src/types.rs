@@ -1,3 +1,4 @@
+use crate::env::Env;
 use std::collections::HashMap;
 
 // All Mal types should inherit from this
@@ -6,7 +7,13 @@ pub enum MalType {
     List(MalArgs),
     Vector(MalArgs),
     Map(MalMap),
-    Fun(fn(&[MalType]) -> MalRet),
+    Fun(fn(&[MalType]) -> MalRet), // Used for base functions, implemented using the underlying language (rust)
+    MalFun {
+        eval: fn(ast: &MalType, env: &mut Env) -> MalRet,
+        params: Box<MalType>,
+        ast: Box<MalArgs>,
+        env: Env,
+    }, // Used for functions defined within mal
     Sym(String),
     Key(String),
     Str(String),

@@ -39,5 +39,6 @@ pub fn pr_str(ast: &MalType, print_readably: bool) -> String {
                 .join(" ")
         ),
         Fun(func) => format!("{:?}", func),
+        MalFun { .. } => "#<function>".to_string(),
     }
 }
