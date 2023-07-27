@@ -11,7 +11,7 @@ pub enum MalType {
     MalFun {
         eval: fn(ast: &MalType, env: &mut Env) -> MalRet,
         params: Box<MalType>,
-        ast: Box<MalArgs>,
+        ast: Box<MalType>,
         env: Env,
     }, // Used for functions defined within mal
     Sym(String),

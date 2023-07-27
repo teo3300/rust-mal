@@ -13,12 +13,11 @@ fn call_func(func: &MalType, args: &[MalType]) -> MalRet {
             ast,
             env,
         } => {
-            let mut inner_env = env_binds(env, &**params, args)?;
-            let mut ret = Ok(Nil);
-            for el in ast.iter() {
-                ret = eval(el, &mut inner_env);
+            let mut inner_env = env_binds(env, params, args)?;
+            match eval(ast, &mut inner_env)? {
+                List(list) => Ok(list.last().unwrap_or(&Nil).clone()),
+                _ => Err("This should not happen".to_string()),
             }
-            ret
         }
         _ => Err(format!("{:?} is not a function", func)),
     }
@@ -113,9 +112,9 @@ fn fn_star_form(list: &[MalType], env: &Env) -> MalRet {
     }
     let (binds, exprs) = car_cdr(list);
     Ok(MalFun {
-        eval: eval,
+        eval: eval_ast,
         params: Box::new(binds.clone()),
-        ast: Box::new(exprs.to_vec()),
+        ast: Box::new(List(exprs.to_vec())),
         env: env.clone(),
     })
 }
