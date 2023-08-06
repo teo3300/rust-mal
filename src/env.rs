@@ -1,5 +1,7 @@
 use crate::types::MalType::*;
 use crate::types::{MalMap, MalRet, MalType};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 // This is the first time I implement a macro, and I'm copying it
 // so I will comment this a LOT
@@ -9,7 +11,7 @@ macro_rules! env_init {
         {
             // the macro prevent the macro from disrupting the external code
             // this is the block of code that will substitute the macro
-            Env::new($outer)
+            env_new($outer)
             // returns an empty map
         }
     };
@@ -20,9 +22,9 @@ macro_rules! env_init {
         // recognizable structure
         {
             // create an empty map
-            let mut map = env_init!($outer);
+            let map = env_init!($outer);
             $( // Do this for all elements of the arguments list
-                map.set($key, &$val);
+                env_set(&map, $key, &$val);
             )*
             // return the new map
             map
@@ -31,36 +33,37 @@ macro_rules! env_init {
 }
 
 #[derive(Debug, Clone)]
-pub struct Env {
-    data: MalMap,
-    outer: Option<Box<Env>>,
+pub struct EnvType {
+    data: RefCell<MalMap>,
+    outer: Option<Env>,
 }
 
-impl Env {
-    pub fn new(outer: Option<Box<Env>>) -> Self {
-        Env {
-            data: MalMap::new(),
-            outer,
-        }
-    }
+pub type Env = Rc<EnvType>;
+// Following rust implementation, using shorthand to always pas Reference count
 
-    pub fn set(&mut self, sym: &str, val: &MalType) {
-        self.data.insert(sym.to_string(), val.clone());
-    }
+pub fn env_new(outer: Option<Env>) -> Env {
+    Rc::new(EnvType {
+        data: RefCell::new(MalMap::new()),
+        outer,
+    })
+}
 
-    pub fn get(&self, sym: &String) -> MalRet {
-        match self.data.get(sym) {
-            Some(val) => Ok(val.clone()),
-            None => match &self.outer {
-                Some(outer) => outer.get(sym),
-                None => Err(format!("symbol {:?} not defined", sym)),
-            },
-        }
+pub fn env_set(env: &Env, sym: &str, val: &MalType) {
+    env.data.borrow_mut().insert(sym.to_string(), val.clone());
+}
+
+pub fn env_get(env: &Env, sym: &String) -> MalRet {
+    match env.data.borrow().get(sym) {
+        Some(val) => Ok(val.clone()),
+        None => match env.outer.clone() {
+            Some(outer) => env_get(&outer, sym),
+            None => Err(format!("symbol {:?} not defined", sym)),
+        },
     }
 }
 
-pub fn env_binds(outer: &Env, binds: &MalType, exprs: &[MalType]) -> Result<Env, String> {
-    let mut env = Env::new(Some(Box::new(outer.clone())));
+pub fn env_binds(outer: Env, binds: &MalType, exprs: &[MalType]) -> Result<Env, String> {
+    let env = env_new(Some(outer));
     match binds {
         List(binds) => {
             if binds.len() != exprs.len() {
@@ -68,7 +71,7 @@ pub fn env_binds(outer: &Env, binds: &MalType, exprs: &[MalType]) -> Result<Env,
             } // TODO: May be possible to leave this be and not set additional elements at all
             for (bind, expr) in binds.iter().zip(exprs.iter()) {
                 match bind {
-                    Sym(sym) => env.set(sym, expr),
+                    Sym(sym) => env_set(&env, sym, expr),
                     _ => {
                         return Err(format!(
                             "Initializing environment: {:?} is not a symbol",

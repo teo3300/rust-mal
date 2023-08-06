@@ -1,5 +1,5 @@
-use crate::env::env_binds;
 use crate::env::Env;
+use crate::env::{env_binds, env_get, env_new, env_set};
 use crate::types::car_cdr;
 use crate::types::MalType::*;
 use crate::types::{MalArgs, MalMap, MalRet, MalType};
@@ -13,8 +13,10 @@ fn call_func(func: &MalType, args: &[MalType]) -> MalRet {
             ast,
             env,
         } => {
-            let mut inner_env = env_binds(env, params, args)?;
-            match eval(ast, &mut inner_env)? {
+            let inner_env = env_binds(env.clone(), params, args)?;
+            // It's fine to clone the environment here
+            // since this is when the function is actually called
+            match eval(ast, inner_env)? {
                 List(list) => Ok(list.last().unwrap_or(&Nil).clone()),
                 _ => Err("This should not happen".to_string()),
             }
@@ -35,14 +37,21 @@ fn eval_func(list: &MalType) -> MalRet {
     }
 }
 
+// When evaluating an expression it's possible
+// (actually the only option I'm aware until now)
+// to clone the environment "env.clone()", performances aside
+//
+// It's not possible, however, to clone the outer when defining
+// a new environment that will be used later (such as when using fn*)
+
 /// def! special form:
 ///     Evaluate the second expression and assign it to the first symbol
-fn def_bang_form(list: &[MalType], env: &mut Env) -> MalRet {
+fn def_bang_form(list: &[MalType], env: &Env) -> MalRet {
     match list.len() {
         2 => match &list[0] {
             Sym(sym) => {
-                let cdr = eval(&list[1], env)?;
-                env.set(sym.as_str(), &cdr);
+                let cdr = eval(&list[1], env.clone())?;
+                env_set(&env, sym.as_str(), &cdr);
                 Ok(cdr)
             }
             _ => Err(format!(
@@ -57,22 +66,22 @@ fn def_bang_form(list: &[MalType], env: &mut Env) -> MalRet {
 /// let* special form:
 ///     Create a temporary inner environment, assigning pair of elements in
 ///     the first list and returning the evaluation of the second expression
-fn let_star_form(list: &[MalType], env: &Env) -> MalRet {
+fn let_star_form(list: &[MalType], env: Env) -> MalRet {
     // Create the inner environment
-    let mut inner_env = Env::new(Some(Box::new(env.clone())));
+    let inner_env = env_new(Some(env.clone()));
     // change the inner environment
     let (car, cdr) = car_cdr(list);
     match car {
         List(list) if list.len() % 2 == 0 => {
             // TODO: Find a way to avoid index looping that is ugly
             for i in (0..list.len()).step_by(2) {
-                def_bang_form(&list[i..i + 2], &mut inner_env)?;
+                def_bang_form(&list[i..i + 2], &inner_env)?;
             }
             if cdr.is_empty() {
                 // TODO: check if it exists a better way to do this
                 Ok(Nil)
             } else {
-                eval(&cdr[0], &mut inner_env)
+                eval(&cdr[0], inner_env)
             }
         }
         _ => Err("First argument of let* must be a list of pair definitions".to_string()),
@@ -82,7 +91,7 @@ fn let_star_form(list: &[MalType], env: &Env) -> MalRet {
 /// do special form:
 ///     Evaluate all the elements in a list using eval_ast and return the
 ///     result of the last evaluation
-fn do_form(list: &[MalType], env: &mut Env) -> MalRet {
+fn do_form(list: &[MalType], env: Env) -> MalRet {
     if list.is_empty() {
         return Err("do form: provide a list as argument".to_string());
     }
@@ -92,12 +101,12 @@ fn do_form(list: &[MalType], env: &mut Env) -> MalRet {
     }
 }
 
-fn if_form(list: &[MalType], env: &mut Env) -> MalRet {
+fn if_form(list: &[MalType], env: Env) -> MalRet {
     if !(2..=3).contains(&list.len()) {
         return Err("if form: number of arguments".to_string());
     }
     let (cond, branches) = car_cdr(list);
-    match eval(cond, env)? {
+    match eval(cond, env.clone())? {
         Nil | Bool(false) => match branches.len() {
             1 => Ok(Nil),
             _ => eval(&branches[1], env),
@@ -106,7 +115,7 @@ fn if_form(list: &[MalType], env: &mut Env) -> MalRet {
     }
 }
 
-fn fn_star_form(list: &[MalType], env: &Env) -> MalRet {
+fn fn_star_form(list: &[MalType], env: Env) -> MalRet {
     if list.is_empty() {
         return Err("fn* form: specify lambda arguments".to_string());
     }
@@ -115,16 +124,16 @@ fn fn_star_form(list: &[MalType], env: &Env) -> MalRet {
         eval: eval_ast,
         params: Box::new(binds.clone()),
         ast: Box::new(List(exprs.to_vec())),
-        env: env.clone(),
+        env: env,
     })
 }
 
 /// Intermediate function to discern special forms from defined symbols
-fn apply(list: &MalArgs, env: &mut Env) -> MalRet {
+fn apply(list: &MalArgs, env: Env) -> MalRet {
     let (car, cdr) = car_cdr(list);
     match car {
-        Sym(sym) if sym == "def!" => def_bang_form(cdr, env),
-        Sym(sym) if sym == "let*" => let_star_form(cdr, env),
+        Sym(sym) if sym == "def!" => def_bang_form(cdr, &env), // Set for env
+        Sym(sym) if sym == "let*" => let_star_form(cdr, env),  // Clone the env
         Sym(sym) if sym == "do" => do_form(cdr, env),
         Sym(sym) if sym == "if" => if_form(cdr, env),
         Sym(sym) if sym == "fn*" => fn_star_form(cdr, env),
@@ -136,7 +145,7 @@ fn apply(list: &MalArgs, env: &mut Env) -> MalRet {
 /// Switch ast evaluation depending on it being a list or not and return the
 /// result of the evaluation, this function calls "eval_ast" to recursively
 /// evaluate asts
-pub fn eval(ast: &MalType, env: &mut Env) -> MalRet {
+pub fn eval(ast: &MalType, env: Env) -> MalRet {
     match &ast {
         List(list) if list.is_empty() => Ok(ast.clone()),
         List(list) if !list.is_empty() => apply(list, env),
@@ -144,28 +153,28 @@ pub fn eval(ast: &MalType, env: &mut Env) -> MalRet {
     }
 }
 
-/// Separetely evaluate all elements in a collection (list or vector)
-fn eval_collection(list: &MalArgs, env: &mut Env) -> Result<MalArgs, String> {
+/// Separately evaluate all elements in a collection (list or vector)
+fn eval_collection(list: &MalArgs, env: Env) -> Result<MalArgs, String> {
     let mut ret = MalArgs::new();
     for el in list {
-        ret.push(eval(el, env)?);
+        ret.push(eval(el, env.clone())?);
     }
     Ok(ret)
 }
 
 /// Evaluate the values of a map
-fn eval_map(map: &MalMap, env: &mut Env) -> MalRet {
+fn eval_map(map: &MalMap, env: Env) -> MalRet {
     let mut ret = MalMap::new();
     for (k, v) in map {
-        ret.insert(k.to_string(), eval(v, env)?);
+        ret.insert(k.to_string(), eval(v, env.clone())?);
     }
     Ok(Map(ret))
 }
 
 /// Eval the provided ast
-fn eval_ast(ast: &MalType, env: &mut Env) -> MalRet {
+fn eval_ast(ast: &MalType, env: Env) -> MalRet {
     match ast {
-        Sym(sym) => env.get(sym),
+        Sym(sym) => env_get(&env, sym),
         List(list) => Ok(List(eval_collection(list, env)?)),
         Vector(vec) => Ok(Vector(eval_collection(vec, env)?)),
         Map(map) => eval_map(map, env),

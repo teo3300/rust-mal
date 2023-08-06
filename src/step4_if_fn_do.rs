@@ -18,7 +18,7 @@ fn READ(input: &str) -> MalRet {
 
 #[allow(non_snake_case)]
 /// Evaluate the generated ast
-fn EVAL(ast: MalType, env: &mut Env) -> MalRet {
+fn EVAL(ast: MalType, env: Env) -> MalRet {
     eval(&ast, env).map_err(|err| format!("@ EVAL: {}", err))
 }
 
@@ -28,8 +28,8 @@ fn PRINT(output: MalType) -> String {
     pr_str(&output, true)
 }
 
-pub fn rep(input: &str, env: &mut Env) -> Result<String, String> {
+pub fn rep(input: &str, env: &Env) -> Result<String, String> {
     let ast = READ(input)?;
-    let out = EVAL(ast, env)?;
+    let out = EVAL(ast, env.clone())?;
     Ok(PRINT(out))
 }

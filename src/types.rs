@@ -9,7 +9,7 @@ pub enum MalType {
     Map(MalMap),
     Fun(fn(&[MalType]) -> MalRet), // Used for base functions, implemented using the underlying language (rust)
     MalFun {
-        eval: fn(ast: &MalType, env: &mut Env) -> MalRet,
+        eval: fn(ast: &MalType, env: Env) -> MalRet,
         params: Box<MalType>,
         ast: Box<MalType>,
         env: Env,
