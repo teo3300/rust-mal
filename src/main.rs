@@ -29,7 +29,10 @@ fn load_file(filename: &str, env: &Env) -> io::Result<()> {
                 // Read line to compose program input
                 input.push_str(&line);
 
-                if input == ""{continue;}
+                // TODO: Horrible way to deal with this but I don't want to fix it now
+                if input == "" || input.chars().next() == Some(';') {
+                    continue;
+                }
 
                 match rep(&input, env) {
                     Ok(_) => {
