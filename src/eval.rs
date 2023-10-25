@@ -3,10 +3,11 @@ use crate::env::{env_binds, env_get, env_new, env_set};
 use crate::types::car_cdr;
 use crate::types::MalType::*;
 use crate::types::{MalArgs, MalMap, MalRet, MalType};
+use crate::printer::prt;
 
 fn call_func(func: &MalType, args: &[MalType]) -> MalRet {
     match func {
-        Fun(func) => func(args),
+        Fun(func, _) => func(args),
         MalFun {
             eval,
             params,
@@ -21,7 +22,7 @@ fn call_func(func: &MalType, args: &[MalType]) -> MalRet {
                 _ => Err("This should not happen".to_string()),
             }
         }
-        _ => Err(format!("{:?} is not a function", func)),
+        _ => Err(format!("{:?} is not a function", prt(func))),
     }
 }
 
@@ -56,7 +57,7 @@ fn def_bang_form(list: &[MalType], env: &Env) -> MalRet {
             }
             _ => Err(format!(
                 "def! Assigning {:?} to {:?}, which is not a symbol",
-                &list[1], &list[0]
+                prt(&list[1]), prt(&list[0])
             )),
         },
         _ => Err("def! form: needs 2 arguments".to_string()),
@@ -128,6 +129,23 @@ fn fn_star_form(list: &[MalType], env: Env) -> MalRet {
     })
 }
 
+use crate::printer::print_malfun;
+
+pub fn help_form(list: &[MalType], env: Env) -> MalRet {
+    for sym in list {
+        match sym {
+            Sym(sym_str) => match eval(sym, env.clone())? {
+                Fun(_, desc) => println!("{}\t[builtin]: {}", sym_str, desc),
+                MalFun {params, ast, .. }
+                    => print_malfun(sym_str, *params, *ast),
+                _ => println!("{:?} is not defined as a function", sym_str)
+            }
+            _ => println!("{:?} is not a symbol", prt(sym))
+        }
+    }
+    return Ok(Bool(true));
+}
+
 /// Intermediate function to discern special forms from defined symbols
 fn apply(list: &MalArgs, env: Env) -> MalRet {
     let (car, cdr) = car_cdr(list);
@@ -137,6 +155,7 @@ fn apply(list: &MalArgs, env: Env) -> MalRet {
         Sym(sym) if sym == "do" => do_form(cdr, env),
         Sym(sym) if sym == "if" => if_form(cdr, env),
         Sym(sym) if sym == "fn*" => fn_star_form(cdr, env),
+        Sym(sym) if sym == "help" => help_form(cdr, env),
         // Filter out special forms
         _ => eval_func(&eval_ast(&List(list.to_vec()), env)?),
     }

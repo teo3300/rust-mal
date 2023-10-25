@@ -13,13 +13,13 @@ use crate::types::{MalRet, MalType};
 #[allow(non_snake_case)]
 /// Read input and generate an ast
 fn READ(input: &str) -> MalRet {
-    read_str(input).map_err(|err| format!("@ READ: {}", err))
+    read_str(input).map_err(|err| format!("READ: {}", err))
 }
 
 #[allow(non_snake_case)]
 /// Evaluate the generated ast
 fn EVAL(ast: MalType, env: Env) -> MalRet {
-    eval(&ast, env).map_err(|err| format!("@ EVAL: {}", err))
+    eval(&ast, env).map_err(|err| format!("EVAL: {}", err))
 }
 
 #[allow(non_snake_case)]
@@ -28,8 +28,12 @@ fn PRINT(output: MalType) -> String {
     pr_str(&output, true)
 }
 
-pub fn rep(input: &str, env: &Env) -> Result<String, String> {
-    let ast = READ(input)?;
-    let out = EVAL(ast, env.clone())?;
+use crate::types::Severity;
+
+pub fn rep(input: &str, env: &Env) -> Result<String, (String, Severity)> {
+    let ast = READ(input)
+        .map_err(|err| (err, Severity::Recoverable))?;
+    let out = EVAL(ast, env.clone())
+        .map_err(|err| (err, Severity::Unrecoverable))?;
     Ok(PRINT(out))
 }

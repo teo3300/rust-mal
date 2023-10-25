@@ -1,0 +1,9 @@
+(def! func
+    (fn* (a b c)
+
+        (def! d (+ a b))
+        (- c d)))
+
+(test 1 2 14)
+(help test)
+(quit)

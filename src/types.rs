@@ -2,12 +2,12 @@ use crate::env::Env;
 use std::collections::HashMap;
 
 // All Mal types should inherit from this
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum MalType {
     List(MalArgs),
     Vector(MalArgs),
     Map(MalMap),
-    Fun(fn(&[MalType]) -> MalRet), // Used for base functions, implemented using the underlying language (rust)
+    Fun(fn(&[MalType]) -> MalRet, &'static str), // Used for base functions, implemented using the underlying language (rust)
     MalFun {
         eval: fn(ast: &MalType, env: Env) -> MalRet,
         params: Box<MalType>,
@@ -22,22 +22,19 @@ pub enum MalType {
     Nil,
 }
 
-// Stolen, but this way it's easier to handle errors
+#[derive(PartialEq)]
+pub enum Severity {
+    Recoverable,
+    Unrecoverable
+}
 
-/*
-#[derive(Debug)]
-pub enum MalErr {
-    Str(String), // Messages to the user
-                 // Val(MalType),
-                 // Messages to the program
-} TEMP TEMP  */
 pub type MalErr = String;
-
 pub type MalArgs = Vec<MalType>;
 pub type MalMap = HashMap<String, MalType>;
 pub type MalRet = Result<MalType, MalErr>;
 
 use MalType::{Key, Map, Str};
+use crate::printer::prt;
 
 pub fn make_map(list: MalArgs) -> MalRet {
     if list.len() % 2 != 0 {
@@ -52,7 +49,7 @@ pub fn make_map(list: MalArgs) -> MalRet {
                 let v = &list[i + 1];
                 map.insert(k.to_string(), v.clone());
             }
-            _ => return Err(format!("Map key not valid: {:?}", list[i])),
+            _ => return Err(format!("Map key not valid: {}", prt(&list[i]))),
         }
     }
     Ok(Map(map))
@@ -92,7 +89,7 @@ use MalType::Int;
 fn if_number(val: &MalType) -> Result<isize, String> {
     match val {
         Int(val) => Ok(*val),
-        _ => Err(format!("{:?} is not a number", val)),
+        _ => Err(format!("{:?} is not a number", prt(&val))),
     }
 }
 

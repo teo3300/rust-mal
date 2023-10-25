@@ -38,7 +38,20 @@ pub fn pr_str(ast: &MalType, print_readably: bool) -> String {
                 .collect::<Vec<String>>()
                 .join(" ")
         ),
-        Fun(func) => format!("{:?}", func),
+        Fun(_, desc) => format!("{}", desc),
         MalFun { .. } => "#<function>".to_string(),
+    }
+}
+
+pub fn prt(ast: &MalType) -> String {
+    return pr_str(ast, true)
+}
+
+pub fn print_malfun(sym: &String, params: MalType, ast: MalType) {
+    print!("; {} {}:\n", sym, prt(&params));
+    match ast {
+        List(list) => for el in list {
+            println!(";   {}", prt(&el))},
+        _ => panic!("Function body is not a list")
     }
 }

@@ -32,7 +32,7 @@ macro_rules! env_init {
     };
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct EnvType {
     data: RefCell<MalMap>,
     outer: Option<Env>,
@@ -62,6 +62,8 @@ pub fn env_get(env: &Env, sym: &String) -> MalRet {
     }
 }
 
+use crate::printer::prt;
+
 pub fn env_binds(outer: Env, binds: &MalType, exprs: &[MalType]) -> Result<Env, String> {
     let env = env_new(Some(outer));
     match binds {
@@ -75,7 +77,7 @@ pub fn env_binds(outer: Env, binds: &MalType, exprs: &[MalType]) -> Result<Env, 
                     _ => {
                         return Err(format!(
                             "Initializing environment: {:?} is not a symbol",
-                            bind
+                            prt(bind)
                         ))
                     }
                 }
@@ -90,18 +92,23 @@ use crate::types::MalType::{Fun, Str};
 use crate::types::{arithmetic_op, comparison_op};
 use std::process::exit;
 
+fn panic() -> MalRet {
+    panic!("If this messagge occurs, something went terribly wrong")
+}
+
 pub fn env_init() -> Env {
     env_init!(None,
-              "test" => Fun(|_| Ok(Str("This is a test function".to_string()))),
-              "quit" => Fun(|_| {println!("Bye!"); exit(0)}),
-              "+"    => Fun(|a| arithmetic_op(0, |a, b| a + b, a)),
-              "-"    => Fun(|a| arithmetic_op(0, |a, b| a - b, a)),
-              "*"    => Fun(|a| arithmetic_op(1, |a, b| a * b, a)),
-              "/"    => Fun(|a| arithmetic_op(1, |a, b| a / b, a)),
-              "="    => Fun(|a| comparison_op(|a, b| a == b, a)),
-              ">"    => Fun(|a| comparison_op(|a, b| a >  b, a)),
-              "<"    => Fun(|a| comparison_op(|a, b| a >  b, a)),
-              ">="   => Fun(|a| comparison_op(|a, b| a >= b, a)),
-              "<="   => Fun(|a| comparison_op(|a, b| a <= b, a))
+              "test" => Fun(|_| Ok(Str("This is a test function".to_string())), "Just a test function"),
+              "quit" => Fun(|_| {exit(0)}, "Quits the program with success status (0)"),
+              "help" => Fun(|_| {panic()}, "Gets information about the symbols"),
+              "+"    => Fun(|a| arithmetic_op(0, |a, b| a + b, a), "Returns the sum of the arguments"),
+              "-"    => Fun(|a| arithmetic_op(0, |a, b| a - b, a), "Returns the difference of the arguments"),
+              "*"    => Fun(|a| arithmetic_op(1, |a, b| a * b, a), "Returns the product of the arguments"),
+              "/"    => Fun(|a| arithmetic_op(1, |a, b| a / b, a), "Returns the division of the arguments"),
+              "="    => Fun(|a| comparison_op(|a, b| a == b, a), "Returns true if the arguments are equals, 'nil' otherwise"),
+              ">"    => Fun(|a| comparison_op(|a, b| a >  b, a), "Returns true if the arguments are in strictly descending order, 'nil' otherwise"),
+              "<"    => Fun(|a| comparison_op(|a, b| a >  b, a), "Returns true if the arguments are in strictly ascending order, 'nil' otherwise"),
+              ">="   => Fun(|a| comparison_op(|a, b| a >= b, a), "Returns true if the arguments are in descending order, 'nil' otherwise"),
+              "<="   => Fun(|a| comparison_op(|a, b| a <= b, a), "Returns true if the arguments are in ascending order, 'nil' otherwise")
     )
 }
