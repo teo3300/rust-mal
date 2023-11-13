@@ -2,7 +2,7 @@ use crate::env::Env;
 use std::collections::HashMap;
 
 // All Mal types should inherit from this
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum MalType {
     List(MalArgs),
     Vector(MalArgs),
@@ -22,23 +22,56 @@ pub enum MalType {
     Nil,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum Severity {
     Recoverable,
-    Unrecoverable
+    Unrecoverable,
 }
 
-pub type MalErr = String;
+pub struct MalErr {
+    message: String,
+    severity: Severity,
+}
+
+impl MalErr {
+    pub fn new(message: String, severity: Severity) -> Self {
+        Self {
+            message: message,
+            severity,
+        }
+    }
+
+    pub fn message(&self) -> String {
+        self.message.to_string()
+    }
+
+    pub fn severity(&self) -> Severity {
+        self.severity
+    }
+
+    pub fn is_recoverable(&self) -> bool {
+        self.severity == Severity::Recoverable
+    }
+
+    pub fn recoverable(message: &str) -> Self {
+        Self::new(message.to_owned(), Severity::Recoverable)
+    }
+
+    pub fn unrecoverable(message: &str) -> Self {
+        Self::new(message.to_owned(), Severity::Unrecoverable)
+    }
+}
+
 pub type MalArgs = Vec<MalType>;
 pub type MalMap = HashMap<String, MalType>;
 pub type MalRet = Result<MalType, MalErr>;
 
-use MalType::{Key, Map, Str};
 use crate::printer::prt;
+use MalType::{Key, Map, Str};
 
 pub fn make_map(list: MalArgs) -> MalRet {
     if list.len() % 2 != 0 {
-        return Err("Map length is odd: missing value".to_string());
+        return Err(MalErr::unrecoverable("Map length is odd: missing value"));
     }
 
     let mut map = MalMap::new();
@@ -49,7 +82,11 @@ pub fn make_map(list: MalArgs) -> MalRet {
                 let v = &list[i + 1];
                 map.insert(k.to_string(), v.clone());
             }
-            _ => return Err(format!("Map key not valid: {}", prt(&list[i]))),
+            _ => {
+                return Err(MalErr::unrecoverable(
+                    format!("Map key not valid: {}", prt(&list[i])).as_str(),
+                ))
+            }
         }
     }
     Ok(Map(map))
@@ -86,10 +123,12 @@ pub fn car_cdr(list: &[MalType]) -> (&MalType, &[MalType]) {
 
 use MalType::Int;
 
-fn if_number(val: &MalType) -> Result<isize, String> {
+fn if_number(val: &MalType) -> Result<isize, MalErr> {
     match val {
         Int(val) => Ok(*val),
-        _ => Err(format!("{:?} is not a number", prt(&val))),
+        _ => Err(MalErr::unrecoverable(
+            format!("{:?} is not a number", prt(&val)).as_str(),
+        )),
     }
 }
 
@@ -113,7 +152,9 @@ use MalType::{Bool, Nil};
 
 pub fn comparison_op(f: fn(isize, isize) -> bool, args: &[MalType]) -> MalRet {
     match args.len() {
-        0 => Err("Comparison requires at least 1 argument".to_string()),
+        0 => Err(MalErr::unrecoverable(
+            "Comparison requires at least 1 argument",
+        )),
         _ => {
             let (left, rights) = car_cdr(args);
             let mut left = if_number(left)?;

@@ -1,4 +1,4 @@
-use crate::types::MalType::*;
+use crate::types::{MalErr, MalType::*};
 use crate::types::{MalMap, MalRet, MalType};
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -32,7 +32,7 @@ macro_rules! env_init {
     };
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct EnvType {
     data: RefCell<MalMap>,
     outer: Option<Env>,
@@ -57,34 +57,36 @@ pub fn env_get(env: &Env, sym: &String) -> MalRet {
         Some(val) => Ok(val.clone()),
         None => match env.outer.clone() {
             Some(outer) => env_get(&outer, sym),
-            None => Err(format!("symbol {:?} not defined", sym)),
+            None => Err(MalErr::unrecoverable(
+                format!("symbol {:?} not defined", sym).as_str(),
+            )),
         },
     }
 }
 
 use crate::printer::prt;
 
-pub fn env_binds(outer: Env, binds: &MalType, exprs: &[MalType]) -> Result<Env, String> {
+pub fn env_binds(outer: Env, binds: &MalType, exprs: &[MalType]) -> Result<Env, MalErr> {
     let env = env_new(Some(outer));
     match binds {
         List(binds) => {
             if binds.len() != exprs.len() {
-                return Err("Env init with unmatched length".to_string());
+                return Err(MalErr::unrecoverable("Env init with unmatched length"));
             } // TODO: May be possible to leave this be and not set additional elements at all
             for (bind, expr) in binds.iter().zip(exprs.iter()) {
                 match bind {
                     Sym(sym) => env_set(&env, sym, expr),
                     _ => {
-                        return Err(format!(
-                            "Initializing environment: {:?} is not a symbol",
-                            prt(bind)
+                        return Err(MalErr::unrecoverable(
+                            format!("Initializing environment: {:?} is not a symbol", prt(bind))
+                                .as_str(),
                         ))
                     }
                 }
             }
             Ok(env)
         }
-        _ => Err("init: first argument must be a list".to_string()),
+        _ => Err(MalErr::unrecoverable("init: first argument must be a list")),
     }
 }
 
@@ -92,7 +94,7 @@ use crate::types::MalType::{Fun, Str};
 use crate::types::{arithmetic_op, comparison_op};
 use std::process::exit;
 
-fn panic() -> MalRet {
+pub fn scream() -> MalRet {
     panic!("If this messagge occurs, something went terribly wrong")
 }
 
@@ -100,7 +102,7 @@ pub fn env_init() -> Env {
     env_init!(None,
               "test" => Fun(|_| Ok(Str("This is a test function".to_string())), "Just a test function"),
               "quit" => Fun(|_| {exit(0)}, "Quits the program with success status (0)"),
-              "help" => Fun(|_| {panic()}, "Gets information about the symbols"),
+              "help" => Fun(|_| {scream()}, "Gets information about the symbols"),
               "+"    => Fun(|a| arithmetic_op(0, |a, b| a + b, a), "Returns the sum of the arguments"),
               "-"    => Fun(|a| arithmetic_op(0, |a, b| a - b, a), "Returns the difference of the arguments"),
               "*"    => Fun(|a| arithmetic_op(1, |a, b| a * b, a), "Returns the product of the arguments"),

@@ -1,9 +1,9 @@
-use crate::env::Env;
 use crate::env::{env_binds, env_get, env_new, env_set};
-use crate::types::car_cdr;
-use crate::types::MalType::*;
-use crate::types::{MalArgs, MalMap, MalRet, MalType};
+use crate::env::{scream, Env};
 use crate::printer::prt;
+use crate::types::MalType::*;
+use crate::types::{car_cdr, MalErr};
+use crate::types::{MalArgs, MalMap, MalRet, MalType};
 
 fn call_func(func: &MalType, args: &[MalType]) -> MalRet {
     match func {
@@ -19,10 +19,12 @@ fn call_func(func: &MalType, args: &[MalType]) -> MalRet {
             // since this is when the function is actually called
             match eval(ast, inner_env)? {
                 List(list) => Ok(list.last().unwrap_or(&Nil).clone()),
-                _ => Err("This should not happen".to_string()),
+                _ => scream(),
             }
         }
-        _ => Err(format!("{:?} is not a function", prt(func))),
+        _ => Err(MalErr::unrecoverable(
+            format!("{:?} is not a function", prt(func)).as_str(),
+        )),
     }
 }
 
@@ -55,12 +57,16 @@ fn def_bang_form(list: &[MalType], env: &Env) -> MalRet {
                 env_set(&env, sym.as_str(), &cdr);
                 Ok(cdr)
             }
-            _ => Err(format!(
-                "def! Assigning {:?} to {:?}, which is not a symbol",
-                prt(&list[1]), prt(&list[0])
+            _ => Err(MalErr::unrecoverable(
+                format!(
+                    "def! Assigning {:?} to {:?}, which is not a symbol",
+                    prt(&list[1]),
+                    prt(&list[0])
+                )
+                .as_str(),
             )),
         },
-        _ => Err("def! form: needs 2 arguments".to_string()),
+        _ => Err(MalErr::unrecoverable("def! form: needs 2 arguments")),
     }
 }
 
@@ -85,7 +91,9 @@ fn let_star_form(list: &[MalType], env: Env) -> MalRet {
                 eval(&cdr[0], inner_env)
             }
         }
-        _ => Err("First argument of let* must be a list of pair definitions".to_string()),
+        _ => Err(MalErr::unrecoverable(
+            "First argument of let* must be a list of pair definitions",
+        )),
     }
 }
 
@@ -94,17 +102,19 @@ fn let_star_form(list: &[MalType], env: Env) -> MalRet {
 ///     result of the last evaluation
 fn do_form(list: &[MalType], env: Env) -> MalRet {
     if list.is_empty() {
-        return Err("do form: provide a list as argument".to_string());
+        return Err(MalErr::unrecoverable("do form: provide a list as argument"));
     }
     match eval_ast(&list[0], env)? {
         List(list) => Ok(list.last().unwrap_or(&Nil).clone()),
-        _ => Err("do form: argument must be a list".to_string()),
+        _ => Err(MalErr::unrecoverable("do form: argument must be a list")),
     }
 }
 
 fn if_form(list: &[MalType], env: Env) -> MalRet {
     if !(2..=3).contains(&list.len()) {
-        return Err("if form: number of arguments".to_string());
+        return Err(MalErr::unrecoverable(
+            "if form: number of arguments is wrong",
+        ));
     }
     let (cond, branches) = car_cdr(list);
     match eval(cond, env.clone())? {
@@ -118,7 +128,7 @@ fn if_form(list: &[MalType], env: Env) -> MalRet {
 
 fn fn_star_form(list: &[MalType], env: Env) -> MalRet {
     if list.is_empty() {
-        return Err("fn* form: specify lambda arguments".to_string());
+        return Err(MalErr::unrecoverable("fn* form: specify lambda arguments"));
     }
     let (binds, exprs) = car_cdr(list);
     Ok(MalFun {
@@ -136,11 +146,10 @@ pub fn help_form(list: &[MalType], env: Env) -> MalRet {
         match sym {
             Sym(sym_str) => match eval(sym, env.clone())? {
                 Fun(_, desc) => println!("{}\t[builtin]: {}", sym_str, desc),
-                MalFun {params, ast, .. }
-                    => print_malfun(sym_str, *params, *ast),
-                _ => println!("{:?} is not defined as a function", sym_str)
-            }
-            _ => println!("{:?} is not a symbol", prt(sym))
+                MalFun { params, ast, .. } => print_malfun(sym_str, *params, *ast),
+                _ => println!("{:?} is not defined as a function", sym_str),
+            },
+            _ => println!("{:?} is not a symbol", prt(sym)),
         }
     }
     return Ok(Bool(true));
@@ -173,7 +182,7 @@ pub fn eval(ast: &MalType, env: Env) -> MalRet {
 }
 
 /// Separately evaluate all elements in a collection (list or vector)
-fn eval_collection(list: &MalArgs, env: Env) -> Result<MalArgs, String> {
+fn eval_collection(list: &MalArgs, env: Env) -> Result<MalArgs, MalErr> {
     let mut ret = MalArgs::new();
     for el in list {
         ret.push(eval(el, env.clone())?);

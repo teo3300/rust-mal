@@ -44,14 +44,17 @@ pub fn pr_str(ast: &MalType, print_readably: bool) -> String {
 }
 
 pub fn prt(ast: &MalType) -> String {
-    return pr_str(ast, true)
+    return pr_str(ast, true);
 }
 
 pub fn print_malfun(sym: &String, params: MalType, ast: MalType) {
     print!("; {} {}:\n", sym, prt(&params));
     match ast {
-        List(list) => for el in list {
-            println!(";   {}", prt(&el))},
-        _ => panic!("Function body is not a list")
+        List(list) => {
+            for el in list {
+                println!(";   {}", prt(&el))
+            }
+        }
+        _ => panic!("Function body is not a list"),
     }
 }

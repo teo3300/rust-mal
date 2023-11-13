@@ -1,3 +1,6 @@
+
+use std::cell::Cell;
+
 // Specyfy components in "types"
 use crate::types::*;
 // By specifying enum variants it's possible to omit namespace
@@ -7,34 +10,36 @@ use regex::Regex;
 
 pub struct Reader {
     tokens: Vec<String>,
-    ptr: usize,
+    ptr: Cell<usize>,
 }
+
+type Tokens = Vec<String>;
 
 // TODO: instead of panic on missing ")" try implementing a multi line parsing
 // Status on return should always be The last element of the last opened lists
 // (append to the "last" list) while traversing
 impl Reader {
-    fn new(tokens: Vec<String>) -> Reader {
-        Reader { tokens, ptr: 0 }
+    pub fn new(input: &str) -> Reader {
+        Reader { tokens: tokenize(input), ptr: Cell::new(0) }
     }
 
     // May be improved
     fn get_token(&self, i: usize) -> Result<String, MalErr> {
         self.tokens
             .get(i)
-            .ok_or("Unexpected EOF".to_string())
+            .ok_or(MalErr::recoverable("Unexpected EOF"))
             .cloned()
     }
 
     /// Returns the token at the current position
     fn peek(&self) -> Result<String, MalErr> {
-        self.get_token(self.ptr)
+        self.get_token(self.ptr.get())
     }
 
     /// Returns the token at current position and increment current position
-    fn next(&mut self) -> Result<String, MalErr> {
-        self.ptr += 1;
-        self.get_token(self.ptr - 1)
+    fn next(&self) -> Result<String, MalErr> {
+        self.ptr.set(self.ptr.get() + 1);
+        self.get_token(self.ptr.get() - 1)
     }
 
     /// Repeatedly calls `read_form` of the reader object until it finds a ")" token
@@ -42,7 +47,7 @@ impl Reader {
     /// Accumulates results into a MalList
     /// NOTE: `read_list` calls `read_form` -> enable recursion
     /// (lists can contains other lists)
-    fn read_list(&mut self, terminator: &str) -> MalRet {
+    fn read_list(&self, terminator: &str) -> MalRet {
         self.next()?;
 
         let mut vector = MalArgs::new();
@@ -56,14 +61,16 @@ impl Reader {
             ")" => Ok(List(vector)),
             "]" => Ok(Vector(vector)),
             "}" => make_map(vector),
-            _ => Err("Unknown collection terminator".to_string()),
+            t => Err(MalErr::unrecoverable(
+                format!("Unknown collection terminator: {}", t).as_str(),
+            )),
         }
     }
 
     /// Read atomic token and return appropriate scalar ()
-    fn read_atom(&mut self) -> MalRet {
+    fn read_atom(&self) -> MalRet {
         match &self.next()?[..] {
-            ")" | "]" | "}" => Err("Missing open parenthesis".to_string()),
+            ")" | "]" | "}" => Err(MalErr::unrecoverable("Missing open parenthesis")),
             "false" => Ok(Bool(false)),
             "true" => Ok(Bool(true)),
             "nil" => Ok(Nil),
@@ -86,7 +93,7 @@ impl Reader {
     /// Switch on the first character
     /// "(" -> call `read_list`
     /// otherwise  -> call `read_atom`
-    fn read_form(&mut self) -> MalRet {
+    fn read_form(&self) -> MalRet {
         // String slice containing the whole string
         match &self.peek()?[..] {
             // Consume "(" and parse list
@@ -96,22 +103,27 @@ impl Reader {
             _ => self.read_atom(),
         }
     }
+    
+    pub fn ended(&self) -> bool {
+        self.tokens.len() == self.ptr.get()
+    }
 }
 
 /// Call `tokenize` on a string
 /// Create anew Reader with the tokens
 /// Call read_from with the reader instance
-pub fn read_str(input: &str) -> MalRet {
-    Reader::new(tokenize(input)).read_form()
+pub fn read_str(reader: &Reader) -> MalRet {
+    reader.read_form()
 }
 
 /// Read a string and return a list of tokens in it (following regex in README)
 // Add error handling for strings that are not terminated
-fn tokenize(input: &str) -> Vec<String> {
-    Regex::new(r###"[\s,]*(~@|[\[\]{}()'`~^@]|"(?:\\.|[^\\"])*"?|;.*\n|[^\s\[\]{}('"`,;)]*)"###)
+fn tokenize(input: &str) -> Tokens {
+    let tokens = Regex::new(r###"[\s,]*(~@|[\[\]{}()'`~^@]|"(?:\\.|[^\\"])*"?|;.*\n|[^\s\[\]{}('"`,;)]*)"###)
         .unwrap()
         .captures_iter(input)
         .map(|e| e[1].to_string())
-        .filter(|e| !e.is_empty() || !e.starts_with(';'))
-        .collect::<Vec<String>>()
+        .filter(|e| !(e.is_empty() || e.starts_with(';')))
+        .collect::<Vec<String>>();
+    tokens
 }
