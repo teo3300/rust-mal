@@ -1,32 +1,9 @@
-use crate::env::{env_binds, env_get, env_new, env_set};
-use crate::env::{scream, Env};
+use crate::env::{env_get, env_new, env_set};
+use crate::env::Env;
 use crate::printer::prt;
 use crate::types::MalType::*;
-use crate::types::{car_cdr, MalErr};
-use crate::types::{MalArgs, MalMap, MalRet, MalType};
-
-fn call_func(func: &MalType, args: &[MalType]) -> MalRet {
-    match func {
-        Fun(func, _) => func(args),
-        MalFun {
-            eval,
-            params,
-            ast,
-            env,
-        } => {
-            let inner_env = env_binds(env.clone(), params, args)?;
-            // It's fine to clone the environment here
-            // since this is when the function is actually called
-            match eval(ast, inner_env)? {
-                List(list) => Ok(list.last().unwrap_or(&Nil).clone()),
-                _ => scream(),
-            }
-        }
-        _ => Err(MalErr::unrecoverable(
-            format!("{:?} is not a function", prt(func)).as_str(),
-        )),
-    }
-}
+use crate::core::{car_cdr, call_func};
+use crate::types::{MalArgs, MalMap, MalRet, MalErr, MalType};
 
 /// Resolve the first element of the list as the function name and call it
 /// with the other elements as arguments

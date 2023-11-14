@@ -8,6 +8,7 @@ mod printer;
 mod reader;
 mod step4_if_fn_do;
 mod types;
+mod core;
 
 use env::env_init;
 use parse_tools::{load_file, interactive};

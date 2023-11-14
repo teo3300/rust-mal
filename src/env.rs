@@ -1,3 +1,4 @@
+use crate::core::{arithmetic_op, comparison_op, core_exit};
 use crate::types::{MalErr, MalType::*};
 use crate::types::{MalMap, MalRet, MalType};
 use std::cell::RefCell;
@@ -91,18 +92,11 @@ pub fn env_binds(outer: Env, binds: &MalType, exprs: &[MalType]) -> Result<Env, 
 }
 
 use crate::types::MalType::{Fun, Str};
-use crate::types::{arithmetic_op, comparison_op};
-use std::process::exit;
-
-pub fn scream() -> MalRet {
-    panic!("If this messagge occurs, something went terribly wrong")
-}
 
 pub fn env_init() -> Env {
     env_init!(None,
               "test" => Fun(|_| Ok(Str("This is a test function".to_string())), "Just a test function"),
-              "quit" => Fun(|_| {exit(0)}, "Quits the program with success status (0)"),
-              "help" => Fun(|_| {scream()}, "Gets information about the symbols"),
+              "exit" => Fun(|a| {core_exit(a)}, "Quits the program with specified status"),
               "+"    => Fun(|a| arithmetic_op(0, |a, b| a + b, a), "Returns the sum of the arguments"),
               "-"    => Fun(|a| arithmetic_op(0, |a, b| a - b, a), "Returns the difference of the arguments"),
               "*"    => Fun(|a| arithmetic_op(1, |a, b| a * b, a), "Returns the product of the arguments"),

@@ -8,4 +8,5 @@
 (test 1 2 14) (help +)
 (help -)(func 1 2 3)
 (help test)
-; (quit)
+; I even implemented return statement
+(exit (func 1 2 3))
