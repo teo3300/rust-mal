@@ -1,9 +1,11 @@
 (def! func ; ole
-    (fn* (a b c)
+    (fn* (a b c) ; this is all a bunch
 
-        (def! d (+ a b))
-        (- c d)))
+    ; of useless comments
+        (def! d (+ a b)) ; to check if the parser
+        (- c d)))   ; is able to ignore them
 
-(test 1 2 14)
+(test 1 2 14) (help +)
+(help -)(func 1 2 3)
 (help test)
-(quit)
+; (quit)

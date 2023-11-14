@@ -1,5 +1,4 @@
-
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 
 // Specyfy components in "types"
 use crate::types::*;
@@ -9,7 +8,7 @@ use crate::types::MalType::*;
 use regex::Regex;
 
 pub struct Reader {
-    tokens: Vec<String>,
+    tokens: RefCell<Vec<String>>,
     ptr: Cell<usize>,
 }
 
@@ -19,13 +18,31 @@ type Tokens = Vec<String>;
 // Status on return should always be The last element of the last opened lists
 // (append to the "last" list) while traversing
 impl Reader {
-    pub fn new(input: &str) -> Reader {
-        Reader { tokens: tokenize(input), ptr: Cell::new(0) }
+    pub fn new() -> Reader {
+        Reader {
+            tokens: RefCell::new(Vec::new()),
+            ptr: Cell::new(0),
+        }
+    }
+
+    pub fn push(&self, input: &str) {
+        self.ptr.set(0);
+        // reset the state of the parser and push the additional strings
+        self.tokens
+            .borrow_mut()
+            .append(&mut tokenize(input))
+    }
+
+    pub fn clear(&self) {
+        self.ptr.set(0);
+        *self.tokens
+            .borrow_mut() = Vec::new();
     }
 
     // May be improved
     fn get_token(&self, i: usize) -> Result<String, MalErr> {
         self.tokens
+            .borrow()
             .get(i)
             .ok_or(MalErr::recoverable("Unexpected EOF"))
             .cloned()
@@ -103,9 +120,9 @@ impl Reader {
             _ => self.read_atom(),
         }
     }
-    
+
     pub fn ended(&self) -> bool {
-        self.tokens.len() == self.ptr.get()
+        self.tokens.borrow().len() == self.ptr.get()
     }
 }
 
@@ -119,11 +136,13 @@ pub fn read_str(reader: &Reader) -> MalRet {
 /// Read a string and return a list of tokens in it (following regex in README)
 // Add error handling for strings that are not terminated
 fn tokenize(input: &str) -> Tokens {
-    let tokens = Regex::new(r###"[\s,]*(~@|[\[\]{}()'`~^@]|"(?:\\.|[^\\"])*"?|;.*\n|[^\s\[\]{}('"`,;)]*)"###)
-        .unwrap()
-        .captures_iter(input)
-        .map(|e| e[1].to_string())
-        .filter(|e| !(e.is_empty() || e.starts_with(';')))
-        .collect::<Vec<String>>();
+    let tokens = Regex::new(
+        r###"[\s,]*(~@|[\[\]{}()'`~^@]|"(?:\\.|[^\\"])*"?|;.*|[^\s\[\]{}('"`,;)]*)"###,
+    )
+    .unwrap()
+    .captures_iter(input)
+    .map(|e| e[1].to_string())
+    .filter(|e| !(e.is_empty() || e.starts_with(';')))
+    .collect::<Vec<String>>();
     tokens
 }

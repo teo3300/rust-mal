@@ -28,13 +28,14 @@ fn PRINT(output: MalType) -> String {
     pr_str(&output, true)
 }
 
-pub fn rep(input: &str, env: &Env) -> Result<Vec<String>, MalErr> {
-    let reader = Reader::new(input);
+pub fn rep(reader: &Reader, env: &Env) -> Result<Vec<String>, MalErr> {
     let mut ret_str = Vec::new();
     loop {
         let ast = READ(&reader)?;
         let out = EVAL(ast, env.clone())?;
         ret_str.push(PRINT(out));
-        if reader.ended(){break Ok(ret_str);}
+        if reader.ended() {
+            break Ok(ret_str);
+        }
     }
 }
