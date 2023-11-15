@@ -49,7 +49,7 @@ pub fn prt(ast: &MalType) -> String {
     pr_str(ast, true)
 }
 
-pub fn print_malfun(sym: &String, params: Rc<MalType>, ast: Rc<MalType>) {
+pub fn print_malfun(sym: &str, params: Rc<MalType>, ast: Rc<MalType>) {
     println!("{}\t[function]: {}", sym, prt(&params));
     match ast.as_ref() {
         List(list) => {

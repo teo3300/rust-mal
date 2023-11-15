@@ -23,6 +23,31 @@ pub enum MalType {
     Nil,
 }
 
+impl MalType {
+    pub fn if_number(&self) -> Result<isize, MalErr> {
+        match self {
+            Self::Int(val) => Ok(*val),
+            _ => Err(MalErr::unrecoverable(
+                format!("{:?} is not a number", prt(self)).as_str(),
+            )),
+        }
+    }
+
+    pub fn if_list(&self) -> Result<&[MalType], MalErr> {
+        match self {
+            Self::List(list) => Ok(list),
+            _ => Err(MalErr::unrecoverable(format!("{:?} is not a list", prt(self)).as_str()))
+        }
+    }
+
+    pub fn if_symbol(&self) -> Result<&str, MalErr> {
+        match self {
+            Self::Sym(sym) => Ok(sym),
+            _ => Err(MalErr::unrecoverable(format!("{:?} is not a symbol", prt(self)).as_str()))
+        }
+    }
+}
+
 #[derive(PartialEq, Clone, Copy)]
 pub enum Severity {
     Recoverable,

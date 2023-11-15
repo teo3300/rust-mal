@@ -1,5 +1,5 @@
 use crate::core::{arithmetic_op, comparison_op, core_exit};
-use crate::types::{MalErr, MalType::*};
+use crate::types::MalErr;
 use crate::types::{MalMap, MalRet, MalType};
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -54,7 +54,7 @@ pub fn env_set(env: &Env, sym: &str, val: &MalType) -> MalType {
     val.clone()
 }
 
-pub fn env_get(env: &Env, sym: &String) -> MalRet {
+pub fn env_get(env: &Env, sym: &str) -> MalRet {
     match env.data.borrow().get(sym) {
         Some(val) => Ok(val.clone()),
         None => match env.outer.clone() {
@@ -66,32 +66,17 @@ pub fn env_get(env: &Env, sym: &String) -> MalRet {
     }
 }
 
-use crate::printer::prt;
-
 pub fn env_binds(outer: Env, binds: &MalType, exprs: &[MalType]) -> Result<Env, MalErr> {
     let env = env_new(Some(outer));
-    match binds {
-        List(binds) => {
-            if binds.len() != exprs.len() {
-                return Err(MalErr::unrecoverable("Env init with unmatched length"));
-            } // TODO: May be possible to leave this be and not set additional elements at all
-            for (bind, expr) in binds.iter().zip(exprs.iter()) {
-                match bind {
-                    Sym(sym) => {
-                        env_set(&env, sym, expr);
-                    }
-                    _ => {
-                        return Err(MalErr::unrecoverable(
-                            format!("Initializing environment: {:?} is not a symbol", prt(bind))
-                                .as_str(),
-                        ))
-                    }
-                }
-            }
-            Ok(env)
-        }
-        _ => Err(MalErr::unrecoverable("init: first argument must be a list")),
+    let binds = binds.if_list()?;
+    if binds.len() != exprs.len() {
+        return Err(MalErr::unrecoverable("Wrong number of arguments"));
+    } // TODO: May be possible to leave this be and not set additional elements at all
+    for (bind, expr) in binds.iter().zip(exprs.iter()) {
+        let bind = bind.if_symbol()?;
+        env_set(&env, bind, expr);
     }
+    Ok(env)
 }
 
 use crate::types::MalType::{Fun, Str};

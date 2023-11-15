@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::core::{call_func, car_cdr, scream};
+use crate::core::{call_func, car_cdr};
 use crate::env::Env;
 use crate::env::{env_get, env_new, env_set};
 use crate::printer::prt;
@@ -10,13 +10,9 @@ use crate::types::{MalArgs, MalErr, MalMap, MalRet, MalType};
 /// Resolve the first element of the list as the function name and call it
 /// with the other elements as arguments
 fn eval_func(list: &MalType) -> MalRet {
-    match list {
-        List(list) => {
-            let (func, args) = car_cdr(list)?;
-            call_func(func, args)
-        }
-        _ => scream(),
-    }
+    let list = list.if_list()?;
+    let (func, args) = car_cdr(list)?;
+    call_func(func, args)
 }
 
 // When evaluating an expression it's possible
@@ -35,17 +31,9 @@ fn def_bang_form(list: &[MalType], env: Env) -> MalRet {
     if list.len() != 2 {
         return Err(MalErr::unrecoverable("def! form: needs 2 arguments"));
     }
-    match &list[0] {
-        Sym(sym) => Ok(env_set(&env, sym.as_str(), &eval(&list[1], env.clone())?)),
-        _ => Err(MalErr::unrecoverable(
-            format!(
-                "def! Assigning {:?} to {:?}, which is not a symbol",
-                prt(&list[1]),
-                prt(&list[0])
-            )
-            .as_str(),
-        )),
-    }
+    let (car, _) = car_cdr(list)?;
+    let sym = car.if_symbol()?;
+    Ok(env_set(&env, sym, &eval(&list[1], env.clone())?))
 }
 
 /// let* special form:
@@ -56,22 +44,20 @@ fn let_star_form(list: &[MalType], env: Env) -> MalRet {
     let inner_env = env_new(Some(env.clone()));
     // change the inner environment
     let (car, cdr) = car_cdr(list)?;
-    match car {
-        List(list) if list.len() % 2 == 0 => {
-            // TODO: Find a way to avoid index looping that is ugly
-            for i in (0..list.len()).step_by(2) {
-                def_bang_form(&list[i..=i + 1], inner_env.clone())?;
-            }
-            if cdr.is_empty() {
-                // TODO: check if it exists a better way to do this
-                Ok(Nil)
-            } else {
-                eval(&cdr[0], inner_env)
-            }
+    let list = car.if_list()?;
+    if list.len() % 2 == 0 {
+        // TODO: Find a way to avoid index looping that is ugly
+        for i in (0..list.len()).step_by(2) {
+            def_bang_form(&list[i..=i + 1], inner_env.clone())?;
         }
-        _ => Err(MalErr::unrecoverable(
-            "First argument of let* must be a list of pair definitions",
-        )),
+        if cdr.is_empty() {
+            // TODO: check if it exists a better way to do this
+            Ok(Nil)
+        } else {
+            eval(&cdr[0], inner_env)
+        }
+    } else {
+        Err(MalErr::unrecoverable("let* form, number of arguments must be even"))
     }
 }
 
@@ -118,20 +104,13 @@ use crate::printer::print_malfun;
 
 pub fn help_form(list: &[MalType], env: Env) -> MalRet {
     let (sym, _) = car_cdr(list)?;
-    match car_cdr(list)?.0 {
-        Sym(sym_str) => {
-            match eval(sym, env.clone())? {
-                Fun(_, desc) => println!("{}\t[builtin]: {}", sym_str, desc),
-                MalFun { params, ast, .. } => print_malfun(sym_str, params, ast),
-                _ => println!("{}\t[symbol]: {}", sym_str, prt(&env_get(&env, sym_str)?)),
-            }
-            Ok(Bool(true))
-        }
-        _ => {
-            println!("{} is not a symbol", prt(sym));
-            Ok(Nil)
-        }
+    let sym_str = sym.if_symbol()?;
+    match eval(sym, env.clone())? {
+        Fun(_, desc) => println!("{}\t[builtin]: {}", sym_str, desc),
+        MalFun { params, ast, .. } => print_malfun(sym_str, params, ast),
+        _ => println!("{}\t[symbol]: {}", sym_str, prt(&env_get(&env, sym_str)?)),
     }
+    Ok(Bool(true))
 }
 
 /// Intermediate function to discern special forms from defined symbols

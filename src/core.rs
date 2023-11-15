@@ -35,25 +35,16 @@ pub fn call_func(func: &MalType, args: &[MalType]) -> MalRet {
     }
 }
 
-fn if_number(val: &MalType) -> Result<isize, MalErr> {
-    match val {
-        Int(val) => Ok(*val),
-        _ => Err(MalErr::unrecoverable(
-            format!("{:?} is not a number", prt(val)).as_str(),
-        )),
-    }
-}
-
 pub fn arithmetic_op(set: isize, f: fn(isize, isize) -> isize, args: &[MalType]) -> MalRet {
     if args.is_empty() {
         return Ok(Int(set));
     }
 
-    let mut left = if_number(&args[0])?;
+    let mut left = args[0].if_number()?;
     if args.len() > 1 {
         let right = &args[1..];
         for el in right {
-            left = f(left, if_number(el)?);
+            left = f(left, el.if_number()?);
         }
     }
 
@@ -64,9 +55,9 @@ use MalType::{Bool, Nil};
 
 pub fn comparison_op(f: fn(isize, isize) -> bool, args: &[MalType]) -> MalRet {
     let (left, rights) = car_cdr(args)?;
-    let mut left = if_number(left)?;
+    let mut left = left.if_number()?;
     for right in rights {
-        let right = if_number(right)?;
+        let right = right.if_number()?;
         if !f(left, right) {
             return Ok(Nil);
         }
