@@ -28,15 +28,12 @@ impl Reader {
     pub fn push(&self, input: &str) {
         self.ptr.set(0);
         // reset the state of the parser and push the additional strings
-        self.tokens
-            .borrow_mut()
-            .append(&mut tokenize(input))
+        self.tokens.borrow_mut().append(&mut tokenize(input))
     }
 
     pub fn clear(&self) {
         self.ptr.set(0);
-        *self.tokens
-            .borrow_mut() = Vec::new();
+        *self.tokens.borrow_mut() = Vec::new();
     }
 
     // May be improved
@@ -136,13 +133,12 @@ pub fn read_str(reader: &Reader) -> MalRet {
 /// Read a string and return a list of tokens in it (following regex in README)
 // Add error handling for strings that are not terminated
 fn tokenize(input: &str) -> Tokens {
-    let tokens = Regex::new(
-        r###"[\s,]*(~@|[\[\]{}()'`~^@]|"(?:\\.|[^\\"])*"?|;.*|[^\s\[\]{}('"`,;)]*)"###,
-    )
-    .unwrap()
-    .captures_iter(input)
-    .map(|e| e[1].to_string())
-    .filter(|e| !(e.is_empty() || e.starts_with(';')))
-    .collect::<Vec<String>>();
+    let tokens =
+        Regex::new(r###"[\s,]*(~@|[\[\]{}()'`~^@]|"(?:\\.|[^\\"])*"?|;.*|[^\s\[\]{}('"`,;)]*)"###)
+            .unwrap()
+            .captures_iter(input)
+            .map(|e| e[1].to_string())
+            .filter(|e| !(e.is_empty() || e.starts_with(';')))
+            .collect::<Vec<String>>();
     tokens
 }

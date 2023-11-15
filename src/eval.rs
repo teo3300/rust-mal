@@ -1,9 +1,11 @@
-use crate::env::{env_get, env_new, env_set};
+use std::rc::Rc;
+
+use crate::core::{call_func, car_cdr};
 use crate::env::Env;
+use crate::env::{env_get, env_new, env_set};
 use crate::printer::prt;
 use crate::types::MalType::*;
-use crate::core::{car_cdr, call_func};
-use crate::types::{MalArgs, MalMap, MalRet, MalErr, MalType};
+use crate::types::{MalArgs, MalErr, MalMap, MalRet, MalType};
 
 /// Resolve the first element of the list as the function name and call it
 /// with the other elements as arguments
@@ -11,7 +13,7 @@ fn eval_func(list: &MalType) -> MalRet {
     match list {
         List(list) => {
             let (func, args) = car_cdr(list);
-            call_func(func, args)
+            call_func(&func, args)
         }
         _ => todo!("This should never happen, if you see this message I probably broke the code"),
     }
@@ -20,13 +22,16 @@ fn eval_func(list: &MalType) -> MalRet {
 // When evaluating an expression it's possible
 // (actually the only option I'm aware until now)
 // to clone the environment "env.clone()", performances aside
+// [env.clone()]
+// NOTE: Ok, so cloning an Env now is not bad, since it's an Rc
+// (Just pointing this out because I know I will try to change this later)
 //
 // It's not possible, however, to clone the outer when defining
 // a new environment that will be used later (such as when using fn*)
 
 /// def! special form:
 ///     Evaluate the second expression and assign it to the first symbol
-fn def_bang_form(list: &[MalType], env: &Env) -> MalRet {
+fn def_bang_form(list: &[MalType], env: Env) -> MalRet {
     match list.len() {
         2 => match &list[0] {
             Sym(sym) => {
@@ -59,7 +64,7 @@ fn let_star_form(list: &[MalType], env: Env) -> MalRet {
         List(list) if list.len() % 2 == 0 => {
             // TODO: Find a way to avoid index looping that is ugly
             for i in (0..list.len()).step_by(2) {
-                def_bang_form(&list[i..i + 2], &inner_env)?;
+                def_bang_form(&list[i..i + 2], inner_env.clone())?;
             }
             if cdr.is_empty() {
                 // TODO: check if it exists a better way to do this
@@ -94,7 +99,7 @@ fn if_form(list: &[MalType], env: Env) -> MalRet {
         ));
     }
     let (cond, branches) = car_cdr(list);
-    match eval(cond, env.clone())? {
+    match eval(&cond, env.clone())? {
         Nil | Bool(false) => match branches.len() {
             1 => Ok(Nil),
             _ => eval(&branches[1], env),
@@ -110,8 +115,8 @@ fn fn_star_form(list: &[MalType], env: Env) -> MalRet {
     let (binds, exprs) = car_cdr(list);
     Ok(MalFun {
         eval: eval_ast,
-        params: Box::new(binds.clone()),
-        ast: Box::new(List(exprs.to_vec())),
+        params: Rc::new(binds.clone()),
+        ast: Rc::new(List(exprs.to_vec())),
         env: env,
     })
 }
@@ -123,7 +128,7 @@ pub fn help_form(list: &[MalType], env: Env) -> MalRet {
         match sym {
             Sym(sym_str) => match eval(sym, env.clone())? {
                 Fun(_, desc) => println!("{}\t[builtin]: {}", sym_str, desc),
-                MalFun { params, ast, .. } => print_malfun(sym_str, *params, *ast),
+                MalFun { params, ast, .. } => print_malfun(sym_str, params, ast),
                 _ => println!("{:?} is not defined as a function", sym_str),
             },
             _ => println!("{:?} is not a symbol", prt(sym)),
@@ -136,8 +141,8 @@ pub fn help_form(list: &[MalType], env: Env) -> MalRet {
 fn apply(list: &MalArgs, env: Env) -> MalRet {
     let (car, cdr) = car_cdr(list);
     match car {
-        Sym(sym) if sym == "def!" => def_bang_form(cdr, &env), // Set for env
-        Sym(sym) if sym == "let*" => let_star_form(cdr, env),  // Clone the env
+        Sym(sym) if sym == "def!" => def_bang_form(cdr, env), // Set for env
+        Sym(sym) if sym == "let*" => let_star_form(cdr, env), // Clone the env
         Sym(sym) if sym == "do" => do_form(cdr, env),
         Sym(sym) if sym == "if" => if_form(cdr, env),
         Sym(sym) if sym == "fn*" => fn_star_form(cdr, env),

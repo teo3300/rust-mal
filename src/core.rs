@@ -2,8 +2,8 @@
 
 use crate::env::env_binds;
 use crate::printer::prt;
-use crate::types::{MalType, MalErr, MalRet};
-use crate::types::MalType::{Fun, MalFun, List};
+use crate::types::MalType::{Fun, List, MalFun};
+use crate::types::{MalErr, MalRet, MalType};
 
 use MalType::Int;
 
@@ -68,7 +68,7 @@ pub fn comparison_op(f: fn(isize, isize) -> bool, args: &[MalType]) -> MalRet {
         )),
         _ => {
             let (left, rights) = car_cdr(args);
-            let mut left = if_number(left)?;
+            let mut left = if_number(&left)?;
             for right in rights {
                 let right = if_number(right)?;
                 if !f(left, right) {
@@ -98,6 +98,6 @@ use std::process::exit;
 pub fn core_exit(list: &[MalType]) -> MalRet {
     match car_cdr(list).0 {
         Int(val) => exit(*val as i32),
-        _ => exit(-1)
+        _ => exit(-1),
     }
 }

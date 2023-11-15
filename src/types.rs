@@ -1,5 +1,5 @@
 use crate::env::Env;
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
 // All Mal types should inherit from this
 #[derive(Clone, Debug)]
@@ -10,10 +10,11 @@ pub enum MalType {
     Fun(fn(&[MalType]) -> MalRet, &'static str), // Used for base functions, implemented using the underlying language (rust)
     MalFun {
         eval: fn(ast: &MalType, env: Env) -> MalRet,
-        params: Box<MalType>,
-        ast: Box<MalType>,
+        params: Rc<MalType>,
+        ast: Rc<MalType>,
         env: Env,
     }, // Used for functions defined within mal
+    // Use Rc so I can now clone like there's no tomorrow
     Sym(String),
     Key(String),
     Str(String),

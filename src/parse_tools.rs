@@ -26,9 +26,7 @@ pub fn load_file(filename: &str, env: &Env) -> io::Result<()> {
                 }
 
                 last = match rep(&parser, env) {
-                    Err(error) if error.is_recoverable() => {
-                        Err(error)
-                    }
+                    Err(error) if error.is_recoverable() => Err(error),
                     tmp => {
                         parser.clear();
                         tmp.map_err(|error| {
@@ -74,7 +72,8 @@ pub fn interactive(env: Env) {
             match rep(&parser, &env) {
                 Ok(output) => output.iter().for_each(|el| println!("[{}]> {}", num, el)),
                 Err(error) => {
-                    if error.is_recoverable() {// && line != "\n" {
+                    if error.is_recoverable() {
+                        // && line != "\n" {
                         continue;
                     }
                     println!("; [{}]> Error @ {}", num, error.message());

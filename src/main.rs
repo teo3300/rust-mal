@@ -1,6 +1,7 @@
 // io lib to read input and print output
 use std::env::args;
 
+mod core;
 mod env;
 mod eval;
 mod parse_tools;
@@ -8,10 +9,9 @@ mod printer;
 mod reader;
 mod step4_if_fn_do;
 mod types;
-mod core;
 
 use env::env_init;
-use parse_tools::{load_file, interactive};
+use parse_tools::{interactive, load_file};
 
 fn main() {
     let reply_env = env_init();

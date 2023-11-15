@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::types::escape_str;
 use crate::types::MalType;
 use crate::types::MalType::*;
@@ -38,7 +40,7 @@ pub fn pr_str(ast: &MalType, print_readably: bool) -> String {
                 .collect::<Vec<String>>()
                 .join(" ")
         ),
-        Fun(_, desc) => format!("{}", desc),
+        Fun(..) => "#<builtin>".to_string(),
         MalFun { .. } => "#<function>".to_string(),
     }
 }
@@ -47,9 +49,9 @@ pub fn prt(ast: &MalType) -> String {
     return pr_str(ast, true);
 }
 
-pub fn print_malfun(sym: &String, params: MalType, ast: MalType) {
+pub fn print_malfun(sym: &String, params: Rc<MalType>, ast: Rc<MalType>) {
     print!("; {} {}:\n", sym, prt(&params));
-    match ast {
+    match ast.as_ref() {
         List(list) => {
             for el in list {
                 println!(";   {}", prt(&el))
