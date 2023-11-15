@@ -49,8 +49,9 @@ pub fn env_new(outer: Option<Env>) -> Env {
     })
 }
 
-pub fn env_set(env: &Env, sym: &str, val: &MalType) {
+pub fn env_set(env: &Env, sym: &str, val: &MalType) -> MalType {
     env.data.borrow_mut().insert(sym.to_string(), val.clone());
+    val.clone()
 }
 
 pub fn env_get(env: &Env, sym: &String) -> MalRet {
@@ -76,7 +77,9 @@ pub fn env_binds(outer: Env, binds: &MalType, exprs: &[MalType]) -> Result<Env, 
             } // TODO: May be possible to leave this be and not set additional elements at all
             for (bind, expr) in binds.iter().zip(exprs.iter()) {
                 match bind {
-                    Sym(sym) => env_set(&env, sym, expr),
+                    Sym(sym) => {
+                        env_set(&env, sym, expr);
+                    }
                     _ => {
                         return Err(MalErr::unrecoverable(
                             format!("Initializing environment: {:?} is not a symbol", prt(bind))

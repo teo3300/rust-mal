@@ -11,7 +11,7 @@ pub fn load_file(filename: &str, env: &Env) -> io::Result<()> {
     let reader = BufReader::new(file);
     let mut last: Result<Vec<String>, MalErr> = Ok(Vec::new());
 
-    let comment_line = Regex::new(r#"^[\s]*;.*"#).unwrap();
+    let comment_line = Regex::new(r"^[\s]*;.*").unwrap();
 
     let parser = Reader::new();
     for line in reader.lines() {
@@ -19,7 +19,7 @@ pub fn load_file(filename: &str, env: &Env) -> io::Result<()> {
             Ok(line) => {
                 // Read line to compose program inpu
 
-                if line == "" || comment_line.is_match(&line) {
+                if line.is_empty() || comment_line.is_match(&line) {
                     continue; // Don't even add it
                 } else {
                     parser.push(&line);
@@ -39,13 +39,12 @@ pub fn load_file(filename: &str, env: &Env) -> io::Result<()> {
             Err(err) => eprintln!("Error reading line: {}", err),
         }
     }
-    match last {
-        Err(error) => println!(
+    if let Err(error) = last {
+        println!(
             "; ERROR parsing: '{}'\n;   {}\n;   the environment is in an unknown state",
             filename,
             error.message()
-        ),
-        _ => {}
+        )
     }
     Ok(())
 }

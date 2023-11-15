@@ -134,7 +134,7 @@ pub fn read_str(reader: &Reader) -> MalRet {
 // Add error handling for strings that are not terminated
 fn tokenize(input: &str) -> Tokens {
     let tokens =
-        Regex::new(r###"[\s,]*(~@|[\[\]{}()'`~^@]|"(?:\\.|[^\\"])*"?|;.*|[^\s\[\]{}('"`,;)]*)"###)
+        Regex::new(r#"[\s,]*(~@|[\[\]{}()'`~^@]|"(?:\\.|[^\\"])*"?|;.*|[^\s\[\]{}('"`,;)]*)"#)
             .unwrap()
             .captures_iter(input)
             .map(|e| e[1].to_string())

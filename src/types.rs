@@ -36,10 +36,7 @@ pub struct MalErr {
 
 impl MalErr {
     pub fn new(message: String, severity: Severity) -> Self {
-        Self {
-            message: message,
-            severity,
-        }
+        Self { message, severity }
     }
 
     pub fn message(&self) -> String {

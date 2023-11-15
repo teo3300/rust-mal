@@ -36,7 +36,7 @@ pub fn pr_str(ast: &MalType, print_readably: bool) -> String {
         Map(el) => format!(
             "{{{}}}",
             el.iter()
-                .map(|sub| vec![sub.0.to_string(), pr_str(sub.1, print_readably)].join(" "))
+                .map(|sub| [sub.0.to_string(), pr_str(sub.1, print_readably)].join(" "))
                 .collect::<Vec<String>>()
                 .join(" ")
         ),
@@ -46,15 +46,15 @@ pub fn pr_str(ast: &MalType, print_readably: bool) -> String {
 }
 
 pub fn prt(ast: &MalType) -> String {
-    return pr_str(ast, true);
+    pr_str(ast, true)
 }
 
 pub fn print_malfun(sym: &String, params: Rc<MalType>, ast: Rc<MalType>) {
-    print!("; {} {}:\n", sym, prt(&params));
+    println!("{}\t[function]: {}", sym, prt(&params));
     match ast.as_ref() {
         List(list) => {
             for el in list {
-                println!(";   {}", prt(&el))
+                println!(";   {}", prt(el))
             }
         }
         _ => panic!("Function body is not a list"),
