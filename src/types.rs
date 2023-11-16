@@ -36,14 +36,18 @@ impl MalType {
     pub fn if_list(&self) -> Result<&[MalType], MalErr> {
         match self {
             Self::List(list) => Ok(list),
-            _ => Err(MalErr::unrecoverable(format!("{:?} is not a list", prt(self)).as_str()))
+            _ => Err(MalErr::unrecoverable(
+                format!("{:?} is not a list", prt(self)).as_str(),
+            )),
         }
     }
 
     pub fn if_symbol(&self) -> Result<&str, MalErr> {
         match self {
             Self::Sym(sym) => Ok(sym),
-            _ => Err(MalErr::unrecoverable(format!("{:?} is not a symbol", prt(self)).as_str()))
+            _ => Err(MalErr::unrecoverable(
+                format!("{:?} is not a symbol", prt(self)).as_str(),
+            )),
         }
     }
 }

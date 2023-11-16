@@ -4,7 +4,7 @@ use crate::core::{call_func, car_cdr};
 use crate::env::Env;
 use crate::env::{env_get, env_new, env_set};
 use crate::printer::prt;
-use crate::types::MalType::*;
+use crate::types::MalType as M;
 use crate::types::{MalArgs, MalErr, MalMap, MalRet, MalType};
 
 /// Resolve the first element of the list as the function name and call it
@@ -45,19 +45,20 @@ fn let_star_form(list: &[MalType], env: Env) -> MalRet {
     // change the inner environment
     let (car, cdr) = car_cdr(list)?;
     let list = car.if_list()?;
-    if list.len() % 2 == 0 {
-        // TODO: Find a way to avoid index looping that is ugly
+    if list.len() % 2 != 0 {
+        Err(MalErr::unrecoverable(
+            "let* form, number of arguments must be even",
+        ))
+    } else {
+        // TO-DO: Find a way to avoid index looping that is ugly
         for i in (0..list.len()).step_by(2) {
             def_bang_form(&list[i..=i + 1], inner_env.clone())?;
         }
-        if cdr.is_empty() {
-            // TODO: check if it exists a better way to do this
-            Ok(Nil)
-        } else {
-            eval(&cdr[0], inner_env)
+        let mut last = M::Nil;
+        for expr in cdr {
+            last = eval(expr, inner_env.clone())?;
         }
-    } else {
-        Err(MalErr::unrecoverable("let* form, number of arguments must be even"))
+        Ok(last)
     }
 }
 
@@ -68,8 +69,9 @@ fn do_form(list: &[MalType], env: Env) -> MalRet {
     if list.is_empty() {
         return Err(MalErr::unrecoverable("do form: provide a list as argument"));
     }
+    // TODO: this may be different
     match eval_ast(&list[0], env)? {
-        List(list) => Ok(list.last().unwrap_or(&Nil).clone()),
+        M::List(list) => Ok(list.last().unwrap_or(&M::Nil).clone()),
         _ => Err(MalErr::unrecoverable("do form: argument must be a list")),
     }
 }
@@ -82,8 +84,8 @@ fn if_form(list: &[MalType], env: Env) -> MalRet {
     }
     let (cond, branches) = car_cdr(list)?;
     match eval(cond, env.clone())? {
-        Nil | Bool(false) => match branches.len() {
-            1 => Ok(Nil),
+        M::Nil | M::Bool(false) => match branches.len() {
+            1 => Ok(M::Nil),
             _ => eval(&branches[1], env),
         },
         _ => eval(&branches[0], env),
@@ -92,10 +94,10 @@ fn if_form(list: &[MalType], env: Env) -> MalRet {
 
 fn fn_star_form(list: &[MalType], env: Env) -> MalRet {
     let (binds, exprs) = car_cdr(list)?;
-    Ok(MalFun {
+    Ok(M::MalFun {
         eval: eval_ast,
         params: Rc::new(binds.clone()),
-        ast: Rc::new(List(exprs.to_vec())),
+        ast: Rc::new(M::List(exprs.to_vec())),
         env,
     })
 }
@@ -106,25 +108,25 @@ pub fn help_form(list: &[MalType], env: Env) -> MalRet {
     let (sym, _) = car_cdr(list)?;
     let sym_str = sym.if_symbol()?;
     match eval(sym, env.clone())? {
-        Fun(_, desc) => println!("{}\t[builtin]: {}", sym_str, desc),
-        MalFun { params, ast, .. } => print_malfun(sym_str, params, ast),
+        M::Fun(_, desc) => println!("{}\t[builtin]: {}", sym_str, desc),
+        M::MalFun { params, ast, .. } => print_malfun(sym_str, params, ast),
         _ => println!("{}\t[symbol]: {}", sym_str, prt(&env_get(&env, sym_str)?)),
     }
-    Ok(Bool(true))
+    Ok(M::Bool(true))
 }
 
 /// Intermediate function to discern special forms from defined symbols
 fn apply(list: &MalArgs, env: Env) -> MalRet {
     let (car, cdr) = car_cdr(list)?;
     match car {
-        Sym(sym) if sym == "def!" => def_bang_form(cdr, env), // Set for env
-        Sym(sym) if sym == "let*" => let_star_form(cdr, env), // Clone the env
-        Sym(sym) if sym == "do" => do_form(cdr, env),
-        Sym(sym) if sym == "if" => if_form(cdr, env),
-        Sym(sym) if sym == "fn*" => fn_star_form(cdr, env),
-        Sym(sym) if sym == "help" => help_form(cdr, env),
+        M::Sym(sym) if sym == "def!" => def_bang_form(cdr, env), // Set for env
+        M::Sym(sym) if sym == "let*" => let_star_form(cdr, env), // Clone the env
+        M::Sym(sym) if sym == "do" => do_form(cdr, env),
+        M::Sym(sym) if sym == "if" => if_form(cdr, env),
+        M::Sym(sym) if sym == "fn*" => fn_star_form(cdr, env),
+        M::Sym(sym) if sym == "help" => help_form(cdr, env),
         // Filter out special forms
-        _ => eval_func(&eval_ast(&List(list.to_vec()), env)?),
+        _ => eval_func(&eval_ast(&M::List(list.to_vec()), env)?),
     }
 }
 
@@ -133,8 +135,8 @@ fn apply(list: &MalArgs, env: Env) -> MalRet {
 /// evaluate asts
 pub fn eval(ast: &MalType, env: Env) -> MalRet {
     match &ast {
-        List(list) if list.is_empty() => Ok(ast.clone()),
-        List(list) if !list.is_empty() => apply(list, env),
+        M::List(list) if list.is_empty() => Ok(ast.clone()),
+        M::List(list) if !list.is_empty() => apply(list, env),
         _ => eval_ast(ast, env),
     }
 }
@@ -154,16 +156,16 @@ fn eval_map(map: &MalMap, env: Env) -> MalRet {
     for (k, v) in map {
         ret.insert(k.to_string(), eval(v, env.clone())?);
     }
-    Ok(Map(ret))
+    Ok(M::Map(ret))
 }
 
 /// Eval the provided ast
 fn eval_ast(ast: &MalType, env: Env) -> MalRet {
     match ast {
-        Sym(sym) => env_get(&env, sym),
-        List(list) => Ok(List(eval_collection(list, env)?)),
-        Vector(vec) => Ok(Vector(eval_collection(vec, env)?)),
-        Map(map) => eval_map(map, env),
+        M::Sym(sym) => env_get(&env, sym),
+        M::List(list) => Ok(M::List(eval_collection(list, env)?)),
+        M::Vector(vec) => Ok(M::Vector(eval_collection(vec, env)?)),
+        M::Map(map) => eval_map(map, env),
         _ => Ok(ast.clone()),
     }
 }
