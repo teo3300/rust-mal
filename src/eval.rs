@@ -46,20 +46,19 @@ fn let_star_form(list: &[MalType], env: Env) -> MalRet {
     let (car, cdr) = car_cdr(list)?;
     let list = car.if_list()?;
     if list.len() % 2 != 0 {
-        Err(MalErr::unrecoverable(
+        return Err(MalErr::unrecoverable(
             "let* form, number of arguments must be even",
-        ))
-    } else {
-        // TO-DO: Find a way to avoid index looping that is ugly
-        for i in (0..list.len()).step_by(2) {
-            def_bang_form(&list[i..=i + 1], inner_env.clone())?;
-        }
-        let mut last = M::Nil;
-        for expr in cdr {
-            last = eval(expr, inner_env.clone())?;
-        }
-        Ok(last)
+        ));
     }
+    // TO-DO: Find a way to avoid index looping that is ugly
+    for i in (0..list.len()).step_by(2) {
+        def_bang_form(&list[i..=i + 1], inner_env.clone())?;
+    }
+    let mut last = M::Nil;
+    for expr in cdr {
+        last = eval(expr, inner_env.clone())?;
+    }
+    Ok(last)
 }
 
 /// do special form:
@@ -70,10 +69,12 @@ fn do_form(list: &[MalType], env: Env) -> MalRet {
         return Err(MalErr::unrecoverable("do form: provide a list as argument"));
     }
     // TODO: this may be different
-    match eval_ast(&list[0], env)? {
-        M::List(list) => Ok(list.last().unwrap_or(&M::Nil).clone()),
-        _ => Err(MalErr::unrecoverable("do form: argument must be a list")),
+
+    let mut ret = M::Nil;
+    for ast in list {
+        ret = eval(ast, env.clone())?;
     }
+    Ok(ret)
 }
 
 fn if_form(list: &[MalType], env: Env) -> MalRet {
@@ -94,6 +95,7 @@ fn if_form(list: &[MalType], env: Env) -> MalRet {
 
 fn fn_star_form(list: &[MalType], env: Env) -> MalRet {
     let (binds, exprs) = car_cdr(list)?;
+    binds.if_list()?;
     Ok(M::MalFun {
         eval: eval_ast,
         params: Rc::new(binds.clone()),

@@ -51,12 +51,9 @@ pub fn prt(ast: &MalType) -> String {
 
 pub fn print_malfun(sym: &str, params: Rc<MalType>, ast: Rc<MalType>) {
     println!("{}\t[function]: {}", sym, prt(&params));
-    match ast.as_ref() {
-        M::List(list) => {
-            for el in list {
-                println!(";   {}", prt(el))
-            }
-        }
-        _ => panic!("Function body is not a list"),
-    }
+    ast.as_ref()
+        .if_list()
+        .unwrap_or_else(|_| &[])
+        .iter()
+        .for_each(|el| println!(";   {}", prt(el)));
 }

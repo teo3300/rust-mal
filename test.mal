@@ -12,5 +12,11 @@
 (help test)
 (help func)
 (help 1)
+
+; Maaged to fix the do form
+(do 
+    (+ 2 2)
+    (+ 3 4))
+    
 ; I even implemented return statement
 (exit (func 1 2 3))
