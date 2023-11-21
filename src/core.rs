@@ -1,91 +1,55 @@
-// This file should contain all the necessary function to define builtin functions
+use crate::env::{arithmetic_op, car, comparison_op, env_new, env_set, mal_exit, Env};
 
-use crate::env::env_binds;
-use crate::printer::prt;
-use crate::types::MalType::{Fun, List, MalFun};
-use crate::types::{MalErr, MalRet, MalType};
-
-use MalType::Int;
-
-pub fn scream() -> MalRet {
-    panic!("If this messagge occurs, something went terribly wrong")
-}
-
-pub fn call_func(func: &MalType, args: &[MalType]) -> MalRet {
-    match func {
-        Fun(func, _) => func(args),
-        MalFun {
-            eval,
-            params,
-            ast,
-            env,
-            ..
-        } => {
-            let inner_env = env_binds(env.clone(), params, args)?;
-            // It's fine to clone the environment here
-            // since this is when the function is actually called
-            match eval(ast, inner_env)? {
-                List(list) => Ok(list.last().unwrap_or(&Nil).clone()),
-                _ => scream(),
+// This is the first time I implement a macro, and I'm copying it
+// so I will comment this a LOT
+macro_rules! env_init {
+        ($outer:expr) => {
+            // match any istance with no args
+            {
+                // the macro prevent the macro from disrupting the external code
+                // this is the block of code that will substitute the macro
+                env_new($outer)
+                // returns an empty map
             }
-        }
-        _ => Err(MalErr::unrecoverable(
-            format!("{:?} is not a function", prt(func)).as_str(),
-        )),
-    }
-}
-
-pub fn arithmetic_op(set: isize, f: fn(isize, isize) -> isize, args: &[MalType]) -> MalRet {
-    if args.is_empty() {
-        return Ok(Int(set));
-    }
-
-    let mut left = args[0].if_number()?;
-    if args.len() > 1 {
-        let right = &args[1..];
-        for el in right {
-            left = f(left, el.if_number()?);
-        }
+        };
+        ($outer:expr, $($key:expr => $val:expr),*) => {
+            // Only if previous statements did not match,
+            // note that the expression with fat arrow is arbitrary,
+            // could have been slim arrow, comma or any other
+            // recognizable structure
+            {
+                // create an empty map
+                let map = env_init!($outer);
+                $( // Do this for all elements of the arguments list
+                    env_set(&map, $key, &$val);
+                )*
+                // return the new map
+                map
+            }
+        };
     }
 
-    Ok(Int(left))
-}
+use crate::printer::prt;
+use crate::types::mal_comp;
+use crate::types::MalType::{Bool, Fun, Int, List, Nil, Str};
 
-use MalType::{Bool, Nil};
-
-pub fn comparison_op(f: fn(isize, isize) -> bool, args: &[MalType]) -> MalRet {
-    let (left, rights) = car_cdr(args)?;
-    let mut left = left.if_number()?;
-    for right in rights {
-        let right = right.if_number()?;
-        if !f(left, right) {
-            return Ok(Nil);
-        }
-        left = right;
-    }
-    Ok(Bool(true))
-}
-
-/// Extract the car and cdr from a list
-pub fn car_cdr(list: &[MalType]) -> Result<(&MalType, &[MalType]), MalErr> {
-    match list.len() {
-        0 => Err(MalErr::unrecoverable("Expected at least one argument")),
-        _ => Ok((
-            &list[0],
-            if list.len() > 1 {
-                &list[1..]
-            } else {
-                &list[0..0]
-            },
-        )),
-    }
-}
-
-use std::process::exit;
-
-pub fn core_exit(list: &[MalType]) -> MalRet {
-    match car_cdr(list)?.0 {
-        Int(val) => exit(*val as i32),
-        _ => exit(-1),
-    }
+pub fn ns_init() -> Env {
+    env_init!(None,
+        "test"      => Fun(|_| Ok(Str("This is a test function".to_string())), "Just a test function"),
+        "exit"      => Fun(mal_exit, "Quits the program with specified status"),
+        "+"         => Fun(|a| arithmetic_op(0, |a, b| a + b, a), "Returns the sum of the arguments"),
+        "-"         => Fun(|a| arithmetic_op(0, |a, b| a - b, a), "Returns the difference of the arguments"),
+        "*"         => Fun(|a| arithmetic_op(1, |a, b| a * b, a), "Returns the product of the arguments"),
+        "/"         => Fun(|a| arithmetic_op(1, |a, b| a / b, a), "Returns the division of the arguments"),
+        ">"         => Fun(|a| comparison_op(|a, b| a >  b, a), "Returns true if the arguments are in strictly descending order, 'nil' otherwise"),
+        "<"         => Fun(|a| comparison_op(|a, b| a >  b, a), "Returns true if the arguments are in strictly ascending order, 'nil' otherwise"),
+        ">="        => Fun(|a| comparison_op(|a, b| a >= b, a), "Returns true if the arguments are in descending order, 'nil' otherwise"),
+        "<="        => Fun(|a| comparison_op(|a, b| a <= b, a), "Returns true if the arguments are in ascending order, 'nil' otherwise"),
+        "prn"       => Fun(|a| { println!("{} ", prt(car(a)?)); Ok(Nil) }, "Print readably all the arguments passed to it"),
+        "list"      => Fun(|a| Ok(List(a.to_vec())), "Return the arguments as a list"),
+        "list?"     => Fun(|a| Ok(Bool(matches!(car(a)?, List(_)))), "Return true if the first argument is a list, false otherwise"),
+        "empty?"    => Fun(|a| Ok(Bool(car(a)?.if_list()?.is_empty())), "Return true if the first parameter is an empty list, false otherwise, returns an error if the element is not a list"),
+        "count"     => Fun(|a| Ok(Int(car(a)?.if_list()?.len() as isize)), "Return the number of elements in the first argument"),
+        "="         => Fun(mal_comp, "Return true if the first two parameters are the same type and content, in case of lists propagate to all elements")
+    )
 }

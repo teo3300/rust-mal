@@ -1,37 +1,7 @@
-use crate::core::{arithmetic_op, comparison_op, core_exit};
 use crate::types::MalErr;
 use crate::types::{MalMap, MalRet, MalType};
 use std::cell::RefCell;
 use std::rc::Rc;
-
-// This is the first time I implement a macro, and I'm copying it
-// so I will comment this a LOT
-macro_rules! env_init {
-    ($outer:expr) => {
-        // match any istance with no args
-        {
-            // the macro prevent the macro from disrupting the external code
-            // this is the block of code that will substitute the macro
-            env_new($outer)
-            // returns an empty map
-        }
-    };
-    ($outer:expr, $($key:expr => $val:expr),*) => {
-        // Only if previous statements did not match,
-        // note that the expression with fat arrow is arbitrary,
-        // could have been slim arrow, comma or any other
-        // recognizable structure
-        {
-            // create an empty map
-            let map = env_init!($outer);
-            $( // Do this for all elements of the arguments list
-                env_set(&map, $key, &$val);
-            )*
-            // return the new map
-            map
-        }
-    };
-}
 
 #[derive(Clone, Debug)]
 pub struct EnvType {
@@ -79,20 +49,93 @@ pub fn env_binds(outer: Env, binds: &MalType, exprs: &[MalType]) -> Result<Env, 
     Ok(env)
 }
 
-use crate::types::MalType::{Fun, Str};
+pub fn scream() -> MalRet {
+    panic!("If this messagge occurs, something went terribly wrong")
+}
 
-pub fn env_init() -> Env {
-    env_init!(None,
-              "test" => Fun(|_| Ok(Str("This is a test function".to_string())), "Just a test function"),
-              "exit" => Fun(|a| {core_exit(a)}, "Quits the program with specified status"),
-              "+"    => Fun(|a| arithmetic_op(0, |a, b| a + b, a), "Returns the sum of the arguments"),
-              "-"    => Fun(|a| arithmetic_op(0, |a, b| a - b, a), "Returns the difference of the arguments"),
-              "*"    => Fun(|a| arithmetic_op(1, |a, b| a * b, a), "Returns the product of the arguments"),
-              "/"    => Fun(|a| arithmetic_op(1, |a, b| a / b, a), "Returns the division of the arguments"),
-              "="    => Fun(|a| comparison_op(|a, b| a == b, a), "Returns true if the arguments are equals, 'nil' otherwise"),
-              ">"    => Fun(|a| comparison_op(|a, b| a >  b, a), "Returns true if the arguments are in strictly descending order, 'nil' otherwise"),
-              "<"    => Fun(|a| comparison_op(|a, b| a >  b, a), "Returns true if the arguments are in strictly ascending order, 'nil' otherwise"),
-              ">="   => Fun(|a| comparison_op(|a, b| a >= b, a), "Returns true if the arguments are in descending order, 'nil' otherwise"),
-              "<="   => Fun(|a| comparison_op(|a, b| a <= b, a), "Returns true if the arguments are in ascending order, 'nil' otherwise")
-    )
+use crate::printer::prt;
+use crate::types::MalType as M;
+
+pub fn call_func(func: &MalType, args: &[MalType]) -> MalRet {
+    match func {
+        M::Fun(func, _) => func(args),
+        M::MalFun {
+            eval,
+            params,
+            ast,
+            env,
+            ..
+        } => {
+            let inner_env = env_binds(env.clone(), params, args)?;
+            // It's fine to clone the environment here
+            // since this is when the function is actually called
+            match eval(ast, inner_env)? {
+                M::List(list) => Ok(list.last().unwrap_or(&Nil).clone()),
+                _ => scream(),
+            }
+        }
+        _ => Err(MalErr::unrecoverable(
+            format!("{:?} is not a function", prt(func)).as_str(),
+        )),
+    }
+}
+
+pub fn arithmetic_op(set: isize, f: fn(isize, isize) -> isize, args: &[MalType]) -> MalRet {
+    if args.is_empty() {
+        return Ok(M::Int(set));
+    }
+
+    let mut left = args[0].if_number()?;
+    if args.len() > 1 {
+        let right = &args[1..];
+        for el in right {
+            left = f(left, el.if_number()?);
+        }
+    }
+
+    Ok(M::Int(left))
+}
+
+use MalType::{Bool, Nil};
+
+pub fn comparison_op(f: fn(isize, isize) -> bool, args: &[MalType]) -> MalRet {
+    let (left, rights) = car_cdr(args)?;
+    let mut left = left.if_number()?;
+    for right in rights {
+        let right = right.if_number()?;
+        if !f(left, right) {
+            return Ok(Nil);
+        }
+        left = right;
+    }
+    Ok(Bool(true))
+}
+
+pub fn car(list: &[MalType]) -> Result<&MalType, MalErr> {
+    match list.len() {
+        0 => Err(MalErr::unrecoverable("Expected at least one argument")),
+        _ => Ok(&list[0]),
+    }
+}
+
+pub fn cdr(list: &[MalType]) -> &[MalType] {
+    if list.len() > 1 {
+        &list[1..]
+    } else {
+        &list[0..0]
+    }
+}
+
+/// Extract the car and cdr from a list
+pub fn car_cdr(list: &[MalType]) -> Result<(&MalType, &[MalType]), MalErr> {
+    Ok((car(list)?, cdr(list)))
+}
+
+use std::process::exit;
+
+pub fn mal_exit(list: &[MalType]) -> MalRet {
+    match car_cdr(list)?.0 {
+        MalType::Int(val) => exit(*val as i32),
+        _ => exit(-1),
+    }
 }

@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
-use crate::core::{call_func, car_cdr};
 use crate::env::Env;
+use crate::env::{call_func, car_cdr};
 use crate::env::{env_get, env_new, env_set};
 use crate::printer::prt;
 use crate::types::MalType as M;

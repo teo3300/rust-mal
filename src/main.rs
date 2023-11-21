@@ -10,17 +10,17 @@ mod reader;
 mod step4_if_fn_do;
 mod types;
 
-use env::env_init;
+use core::ns_init;
 use parse_tools::{interactive, load_file};
 
 fn main() {
-    let reply_env = env_init();
+    let reply_env = ns_init();
 
     // setup env
-    let args: Vec<String> = args().collect();
-    for filename in &args[1..] {
-        let _ = load_file(filename, &reply_env);
-    }
+    //let args: Vec<String> = args().collect();
+    args().collect::<Vec<String>>()[1..]
+        .iter()
+        .for_each(|f| load_file(f, &reply_env));
 
     interactive(reply_env);
 }

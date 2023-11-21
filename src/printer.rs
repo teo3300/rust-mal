@@ -1,8 +1,15 @@
 use std::rc::Rc;
 
-use crate::types::escape_str;
-use crate::types::MalType;
 use crate::types::MalType as M;
+use crate::types::{escape_str, MalType};
+
+fn key_str(val: &str) -> MalType {
+    if val.starts_with('ʞ') {
+        M::Key(val.to_string())
+    } else {
+        M::Str(val.to_string())
+    }
+}
 
 pub fn pr_str(ast: &MalType, print_readably: bool) -> String {
     match ast {
@@ -36,7 +43,11 @@ pub fn pr_str(ast: &MalType, print_readably: bool) -> String {
         M::Map(el) => format!(
             "{{{}}}",
             el.iter()
-                .map(|sub| [sub.0.to_string(), pr_str(sub.1, print_readably)].join(" "))
+                .map(|sub| [
+                    pr_str(&key_str(sub.0), print_readably),
+                    pr_str(sub.1, print_readably)
+                ]
+                .join(" "))
                 .collect::<Vec<String>>()
                 .join(" ")
         ),
@@ -53,7 +64,7 @@ pub fn print_malfun(sym: &str, params: Rc<MalType>, ast: Rc<MalType>) {
     println!("{}\t[function]: {}", sym, prt(&params));
     ast.as_ref()
         .if_list()
-        .unwrap_or_else(|_| &[])
+        .unwrap_or(&[])
         .iter()
-        .for_each(|el| println!(";   {}", prt(el)));
+        .for_each(|el| println!(";   {}", pr_str(el, true)));
 }

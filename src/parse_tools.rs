@@ -6,8 +6,15 @@ use regex::Regex;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
 
-pub fn load_file(filename: &str, env: &Env) -> io::Result<()> {
-    let file = File::open(filename)?;
+pub fn load_file(filename: &str, env: &Env) {
+    let file_desc = File::open(filename);
+    let file = match file_desc {
+        Ok(file) => file,
+        Err(_) => {
+            println!("Unable to open file: '{}'", filename);
+            exit(1)
+        }
+    };
     let reader = BufReader::new(file);
     let mut last: Result<Vec<String>, MalErr> = Ok(Vec::new());
 
@@ -18,9 +25,9 @@ pub fn load_file(filename: &str, env: &Env) -> io::Result<()> {
         match line {
             Ok(line) => {
                 // Read line to compose program inpu
-
                 if line.is_empty() || comment_line.is_match(&line) {
-                    continue; // Don't even add it
+                    last = Ok(Vec::new());
+                    continue;
                 } else {
                     parser.push(&line);
                 }
@@ -46,10 +53,10 @@ pub fn load_file(filename: &str, env: &Env) -> io::Result<()> {
             error.message()
         )
     }
-    Ok(())
 }
 
 use std::io::Write;
+use std::process::exit;
 
 pub fn interactive(env: Env) {
     let mut num = 0;
