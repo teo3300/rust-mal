@@ -59,10 +59,8 @@ fn mal_eq(a: &M, b: &M) -> MalRet {
         (M::Nil, M::Nil) => true,
         (M::Bool(a), M::Bool(b)) => a == b,
         (M::Int(a), M::Int(b)) => a == b,
-        (M::Key(a), M::Key(b))
-        | (M::Str(a), M::Str(b)) => a == b,
-        (M::List(a), M::List(b))
-        | (M::Vector(a), M::Vector(b)) => a
+        (M::Key(a), M::Key(b)) | (M::Str(a), M::Str(b)) => a == b,
+        (M::List(a), M::List(b)) | (M::Vector(a), M::Vector(b)) => a
             .iter()
             .zip(b.iter())
             .all(|(a, b)| matches!(mal_eq(a, b), Ok(M::Bool(true)))),
@@ -78,7 +76,7 @@ pub fn mal_comp(args: &[MalType]) -> MalRet {
     let (car, cdr) = car_cdr(args)?;
     match cdr.len() {
         0 => Ok(M::Bool(true)),
-        _ => mal_eq(car, &cdr[0])
+        _ => mal_eq(car, &cdr[0]),
     }
 }
 

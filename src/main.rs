@@ -14,10 +14,10 @@ use core::ns_init;
 use parse_tools::{interactive, load_file};
 
 fn main() {
+    // Initialize ns environment
     let reply_env = ns_init();
 
-    // setup env
-    //let args: Vec<String> = args().collect();
+    // load all files passed as arguments
     args().collect::<Vec<String>>()[1..]
         .iter()
         .for_each(|f| load_file(f, &reply_env));

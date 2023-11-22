@@ -3,31 +3,31 @@ use crate::env::{arithmetic_op, car, comparison_op, env_new, env_set, mal_exit, 
 // This is the first time I implement a macro, and I'm copying it
 // so I will comment this a LOT
 macro_rules! env_init {
-        ($outer:expr) => {
-            // match any istance with no args
-            {
-                // the macro prevent the macro from disrupting the external code
-                // this is the block of code that will substitute the macro
-                env_new($outer)
-                // returns an empty map
-            }
-        };
-        ($outer:expr, $($key:expr => $val:expr),*) => {
-            // Only if previous statements did not match,
-            // note that the expression with fat arrow is arbitrary,
-            // could have been slim arrow, comma or any other
-            // recognizable structure
-            {
-                // create an empty map
-                let map = env_init!($outer);
-                $( // Do this for all elements of the arguments list
-                    env_set(&map, $key, &$val);
-                )*
-                // return the new map
-                map
-            }
-        };
-    }
+    ($outer:expr) => {
+        // match any istance with no args
+        {
+            // the macro prevent the macro from disrupting the external code
+            // this is the block of code that will substitute the macro
+            env_new($outer)
+            // returns an empty map
+        }
+    };
+    ($outer:expr, $($key:expr => $val:expr),*) => {
+        // Only if previous statements did not match,
+        // note that the expression with fat arrow is arbitrary,
+        // could have been slim arrow, comma or any other
+        // recognizable structure
+        {
+            // create an empty map
+            let map = env_init!($outer);
+            $( // Do this for all elements of the arguments list
+                env_set(&map, $key, &$val);
+            )*
+            // return the new map
+            map
+        }
+    };
+}
 
 use crate::printer::prt;
 use crate::types::mal_comp;

@@ -14,7 +14,7 @@ pub struct Reader {
 
 type Tokens = Vec<String>;
 
-// TODO: instead of panic on missing ")" try implementing a multi line parsing
+// DONE: instead of panic on missing ")" try implementing a multi line parsing
 // Status on return should always be The last element of the last opened lists
 // (append to the "last" list) while traversing
 impl Reader {
@@ -28,7 +28,7 @@ impl Reader {
     pub fn push(&self, input: &str) {
         self.ptr.set(0);
         // reset the state of the parser and push the additional strings
-        self.tokens.borrow_mut().append(&mut tokenize(input))
+        self.tokens.borrow_mut().append(&mut tokenize(input));
     }
 
     pub fn clear(&self) {
@@ -54,6 +54,11 @@ impl Reader {
     fn next(&self) -> Result<String, MalErr> {
         self.ptr.set(self.ptr.get() + 1);
         self.get_token(self.ptr.get() - 1)
+    }
+
+    /// Returns true if the reader has been consumed entirely
+    pub fn ended(&self) -> bool {
+        self.tokens.borrow().len() == self.ptr.get()
     }
 
     /// Repeatedly calls `read_form` of the reader object until it finds a ")" token
@@ -117,10 +122,6 @@ impl Reader {
             _ => self.read_atom(),
         }
     }
-
-    pub fn ended(&self) -> bool {
-        self.tokens.borrow().len() == self.ptr.get()
-    }
 }
 
 /// Call `tokenize` on a string
@@ -141,4 +142,149 @@ fn tokenize(input: &str) -> Tokens {
             .filter(|e| !(e.is_empty() || e.starts_with(';')))
             .collect::<Vec<String>>();
     tokens
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Tests                                                                      //
+////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(test)]
+mod tests {
+    use crate::types::{MalMap, MalType as M, Severity};
+
+    use super::Reader;
+
+    fn reader_setup1() -> Reader {
+        let r = Reader::new();
+        r.push("()[]{} \"str\" :key sym 1 ; comment");
+        return r;
+    }
+
+    #[test]
+    fn init() {
+        let r = Reader::new();
+        assert_eq!(r.tokens.borrow().len(), 0);
+        assert_eq!(r.ptr.get(), 0);
+    }
+
+    #[test]
+    fn push() {
+        let r = reader_setup1();
+        let mut tokens = Vec::new();
+        for el in r.tokens.borrow().iter() {
+            tokens.push(el.clone());
+        }
+        assert_eq!(
+            tokens,
+            vec!["(", ")", "[", "]", "{", "}", "\"str\"", ":key", "sym", "1"]
+        );
+    }
+
+    #[test]
+    fn get_token() {
+        let r = reader_setup1();
+        assert!(matches!(r.get_token(0), Ok(i) if i == "("));
+        assert!(matches!(r.get_token(9), Ok(i) if i == "1"));
+        assert!(matches!(r.get_token(10), Err(e) if e.severity() == Severity::Recoverable));
+    }
+
+    #[test]
+    fn get() {
+        let r = reader_setup1();
+        assert!(matches!(r.peek(), Ok(i) if i == "("));
+        assert_eq!(r.ptr.get(), 0);
+        assert!(matches!(r.next(), Ok(i) if i == "("));
+        assert_eq!(r.ptr.get(), 1);
+        assert!(matches!(r.next(), Ok(i) if i == ")"));
+        assert_eq!(r.ptr.get(), 2);
+    }
+
+    #[test]
+    fn clear() {
+        let r = reader_setup1();
+        r.clear();
+        assert_eq!(r.tokens.borrow().len(), 0);
+        assert_eq!(r.ptr.get(), 0);
+    }
+
+    #[test]
+    fn ended() {
+        let r = reader_setup1();
+        assert!(!r.ended());
+        for _ in r.tokens.borrow().iter() {
+            assert!(matches!(r.next(), Ok(_)))
+        }
+        assert!(r.ended());
+    }
+
+    #[test]
+    fn errors() {
+        let r = Reader::new();
+        // Correct throws error
+        assert!(matches!(r.peek(), Err(e) if e.severity() == Severity::Recoverable));
+        assert!(matches!(r.next(), Err(e) if e.severity() == Severity::Recoverable));
+    }
+
+    #[test]
+    fn read_atom() {
+        let r = Reader::new();
+        r.push("nil 1 true a \"s\" :a ) ] }");
+        assert!(matches!(r.read_atom(), Ok(x) if matches!(x, M::Nil)));
+        assert!(matches!(r.read_atom(), Ok(x) if matches!(x, M::Int(1))));
+        assert!(matches!(r.read_atom(), Ok(x) if matches!(x, M::Bool(true))));
+        assert!(matches!(r.read_atom(), Ok(x) if matches!(x.clone(), M::Sym(v) if v == "a")));
+        assert!(matches!(r.read_atom(), Ok(x) if matches!(x.clone(), M::Str(v) if v == "s")));
+        assert!(matches!(r.read_atom(), Ok(x) if matches!(x.clone(), M::Key(v) if v == "ʞ:a")));
+        assert!(matches!(r.read_atom(), Err(e) if e.severity() == Severity::Unrecoverable));
+        assert!(matches!(r.read_atom(), Err(e) if e.severity() == Severity::Unrecoverable));
+        assert!(matches!(r.read_atom(), Err(e) if e.severity() == Severity::Unrecoverable));
+    }
+
+    #[test]
+    fn read_form() {
+        let r = Reader::new();
+
+        // Test list
+        let expected = vec![1, 2, 12];
+        r.push("(1 2 12)");
+        assert!(matches!(
+            r.read_form(), Ok(x)
+            if matches!(x.clone(), M::List(list)
+                if list.len() == expected.len()
+                && list.iter().zip(expected)
+                    .all(|(x, y)| matches!(x, M::Int(v) if (*v as isize) == y)))));
+        r.clear();
+
+        // Test vector
+        let exp = vec![1, 2, 12];
+        r.push("[1 2 12]");
+        assert!(matches!(
+            r.read_form(), Ok(x)
+            if matches!(x.clone(), M::Vector(list)
+                if list.len() == exp.len()
+                && list.iter().zip(exp)
+                    .all(|(x, y)| matches!(x, M::Int(v) if (*v as isize) == y)))));
+        r.clear();
+
+        // Test map
+        r.push("{\"i\" 1 \"s\" \"str\" \"t\" true \"n\" nil :s :sym}");
+        let t = match r.read_form() {
+            Ok(x) => match x {
+                M::Map(x) => x,
+                _ => {
+                    assert!(false);
+                    MalMap::new()
+                }
+            },
+            _ => {
+                assert!(false);
+                MalMap::new()
+            }
+        };
+        assert!(matches!(t.get("n"),   Some(x) if matches!(x.clone(), M::Nil)));
+        assert!(matches!(t.get("t"),   Some(x) if matches!(x.clone(), M::Bool(v) if v)));
+        assert!(matches!(t.get("i"),   Some(x) if matches!(x.clone(), M::Int(v) if v == 1)));
+        assert!(matches!(t.get("s"),   Some(x) if matches!(x.clone(), M::Str(v) if v == "str")));
+        assert!(matches!(t.get("ʞ:s"), Some(x) if matches!(x.clone(), M::Key(v) if v == "ʞ:sym")));
+    }
 }
