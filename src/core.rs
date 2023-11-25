@@ -30,8 +30,8 @@ macro_rules! env_init {
 }
 
 use crate::printer::prt;
-use crate::types::{mal_comp, mal_assert};
 use crate::types::MalType::{Bool, Fun, Int, List, Nil, Str};
+use crate::types::{mal_assert, mal_comp};
 
 pub fn ns_init() -> Env {
     env_init!(None,

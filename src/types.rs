@@ -83,7 +83,7 @@ pub fn mal_comp(args: &[MalType]) -> MalRet {
 pub fn mal_assert(args: &[MalType]) -> MalRet {
     args.iter().for_each(|i| match i {
         M::Nil | M::Bool(false) => panic!(),
-        _ => ()
+        _ => (),
     });
     Ok(M::Nil)
 }
