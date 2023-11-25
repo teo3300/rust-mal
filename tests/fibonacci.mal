@@ -1,0 +1,21 @@
+(def! n-fib (fn* (n)
+    (if (<= n 0) 0      ; 0 base case
+        (if (= n 1) 1   ; 1 base case
+            (+ (n-fib (- n 1)) (n-fib (- n 2))))))) ; recursive
+
+(def! assert-fib (fn* (n expected)  ; check fibonacci result
+    (if (= (n-fib n) expected) nil
+        (do (prn (list
+                "Expected"
+                expected
+                "got"
+                (n-fib n)))
+            (assert false)))))      ; cause test panic
+
+(assert-fib 0 0)
+(assert-fib 1 1)
+(assert-fib 2 1)
+(assert-fib 3 2)
+(assert-fib 4 3)
+(assert-fib 5 5)
+(assert-fib 6 8)

@@ -8,6 +8,7 @@ mod parse_tools;
 mod printer;
 mod reader;
 mod step4_if_fn_do;
+mod tests;
 mod types;
 
 use core::ns_init;

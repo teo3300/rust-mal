@@ -150,9 +150,12 @@ fn tokenize(input: &str) -> Tokens {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::{MalMap, MalType as M, Severity};
+    use crate::{
+        reader::read_str,
+        types::{MalMap, MalType as M},
+    };
 
-    use super::Reader;
+    use super::{tokenize, Reader};
 
     fn reader_setup1() -> Reader {
         let r = Reader::new();
@@ -168,12 +171,21 @@ mod tests {
     }
 
     #[test]
+    fn do_tokenize() {
+        assert_eq!(
+            tokenize("()[]{} \"str\" :key sym 1 ; comment"),
+            vec!["(", ")", "[", "]", "{", "}", "\"str\"", ":key", "sym", "1"]
+        );
+    }
+
+    #[test]
     fn push() {
         let r = reader_setup1();
         let mut tokens = Vec::new();
-        for el in r.tokens.borrow().iter() {
-            tokens.push(el.clone());
-        }
+        r.tokens
+            .borrow()
+            .iter()
+            .for_each(|i| tokens.push(i.clone()));
         assert_eq!(
             tokens,
             vec!["(", ")", "[", "]", "{", "}", "\"str\"", ":key", "sym", "1"]
@@ -185,7 +197,7 @@ mod tests {
         let r = reader_setup1();
         assert!(matches!(r.get_token(0), Ok(i) if i == "("));
         assert!(matches!(r.get_token(9), Ok(i) if i == "1"));
-        assert!(matches!(r.get_token(10), Err(e) if e.severity() == Severity::Recoverable));
+        assert!(matches!(r.get_token(10), Err(e) if e.is_recoverable()));
     }
 
     #[test]
@@ -221,8 +233,8 @@ mod tests {
     fn errors() {
         let r = Reader::new();
         // Correct throws error
-        assert!(matches!(r.peek(), Err(e) if e.severity() == Severity::Recoverable));
-        assert!(matches!(r.next(), Err(e) if e.severity() == Severity::Recoverable));
+        assert!(matches!(r.peek(), Err(e) if e.is_recoverable()));
+        assert!(matches!(r.next(), Err(e) if e.is_recoverable()));
     }
 
     #[test]
@@ -235,20 +247,20 @@ mod tests {
         assert!(matches!(r.read_atom(), Ok(x) if matches!(x.clone(), M::Sym(v) if v == "a")));
         assert!(matches!(r.read_atom(), Ok(x) if matches!(x.clone(), M::Str(v) if v == "s")));
         assert!(matches!(r.read_atom(), Ok(x) if matches!(x.clone(), M::Key(v) if v == "ʞ:a")));
-        assert!(matches!(r.read_atom(), Err(e) if e.severity() == Severity::Unrecoverable));
-        assert!(matches!(r.read_atom(), Err(e) if e.severity() == Severity::Unrecoverable));
-        assert!(matches!(r.read_atom(), Err(e) if e.severity() == Severity::Unrecoverable));
+        assert!(matches!(r.read_atom(), Err(e) if !e.is_recoverable()));
+        assert!(matches!(r.read_atom(), Err(e) if !e.is_recoverable()));
+        assert!(matches!(r.read_atom(), Err(e) if !e.is_recoverable()));
     }
 
     #[test]
-    fn read_form() {
+    fn _read_str() {
         let r = Reader::new();
 
         // Test list
         let expected = vec![1, 2, 12];
         r.push("(1 2 12)");
         assert!(matches!(
-            r.read_form(), Ok(x)
+            read_str(&r), Ok(x)
             if matches!(x.clone(), M::List(list)
                 if list.len() == expected.len()
                 && list.iter().zip(expected)
@@ -259,7 +271,7 @@ mod tests {
         let exp = vec![1, 2, 12];
         r.push("[1 2 12]");
         assert!(matches!(
-            r.read_form(), Ok(x)
+            read_str(&r), Ok(x)
             if matches!(x.clone(), M::Vector(list)
                 if list.len() == exp.len()
                 && list.iter().zip(exp)
@@ -268,7 +280,7 @@ mod tests {
 
         // Test map
         r.push("{\"i\" 1 \"s\" \"str\" \"t\" true \"n\" nil :s :sym}");
-        let t = match r.read_form() {
+        let t = match read_str(&r) {
             Ok(x) => match x {
                 M::Map(x) => x,
                 _ => {

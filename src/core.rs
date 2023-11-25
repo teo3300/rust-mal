@@ -30,7 +30,7 @@ macro_rules! env_init {
 }
 
 use crate::printer::prt;
-use crate::types::mal_comp;
+use crate::types::{mal_comp, mal_assert};
 use crate::types::MalType::{Bool, Fun, Int, List, Nil, Str};
 
 pub fn ns_init() -> Env {
@@ -50,6 +50,7 @@ pub fn ns_init() -> Env {
         "list?"     => Fun(|a| Ok(Bool(matches!(car(a)?, List(_)))), "Return true if the first argument is a list, false otherwise"),
         "empty?"    => Fun(|a| Ok(Bool(car(a)?.if_list()?.is_empty())), "Return true if the first parameter is an empty list, false otherwise, returns an error if the element is not a list"),
         "count"     => Fun(|a| Ok(Int(car(a)?.if_list()?.len() as isize)), "Return the number of elements in the first argument"),
-        "="         => Fun(mal_comp, "Return true if the first two parameters are the same type and content, in case of lists propagate to all elements")
+        "="         => Fun(mal_comp, "Return true if the first two parameters are the same type and content, in case of lists propagate to all elements"),
+        "assert"    => Fun(mal_assert, "Panic if one of the argument is false")
     )
 }
