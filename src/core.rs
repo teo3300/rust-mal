@@ -31,7 +31,7 @@ macro_rules! env_init {
 
 use crate::printer::prt;
 use crate::types::MalType::{Bool, Fun, Int, List, Nil, Str};
-use crate::types::{mal_assert, mal_comp};
+use crate::types::{mal_assert, mal_comp, MalArgs};
 
 pub fn ns_init() -> Env {
     env_init!(None,
@@ -45,12 +45,12 @@ pub fn ns_init() -> Env {
         "<"         => Fun(|a| comparison_op(|a, b| a >  b, a), "Returns true if the arguments are in strictly ascending order, 'nil' otherwise"),
         ">="        => Fun(|a| comparison_op(|a, b| a >= b, a), "Returns true if the arguments are in descending order, 'nil' otherwise"),
         "<="        => Fun(|a| comparison_op(|a, b| a <= b, a), "Returns true if the arguments are in ascending order, 'nil' otherwise"),
-        "prn"       => Fun(|a| { println!("{} ", prt(car(a)?)); Ok(Nil) }, "Print readably all the arguments passed to it"),
-        "list"      => Fun(|a| Ok(List(a.to_vec())), "Return the arguments as a list"),
-        "list?"     => Fun(|a| Ok(Bool(matches!(car(a)?, List(_)))), "Return true if the first argument is a list, false otherwise"),
+        "prn"       => Fun(|a| { println!("{} ", prt(car(a)?)); Ok(Nil) }, "Print readably all the arguments"),
+        "list"      => Fun(|a| Ok(List(MalArgs::new(a.to_vec()))), "Return the arguments as a list"),
+        "list?"     => Fun(|a| Ok(Bool(a.iter().all(|el| matches!(el, List(_))))), "Return true if the first argument is a list, false otherwise"),
         "empty?"    => Fun(|a| Ok(Bool(car(a)?.if_list()?.is_empty())), "Return true if the first parameter is an empty list, false otherwise, returns an error if the element is not a list"),
         "count"     => Fun(|a| Ok(Int(car(a)?.if_list()?.len() as isize)), "Return the number of elements in the first argument"),
         "="         => Fun(mal_comp, "Return true if the first two parameters are the same type and content, in case of lists propagate to all elements"),
-        "assert"    => Fun(mal_assert, "Panic if one of the argument is false")
+        "assert"    => Fun(mal_assert, "Panic if one of the arguments is false")
     )
 }

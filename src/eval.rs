@@ -94,7 +94,7 @@ fn fn_star_form(list: &[MalType], env: Env) -> MalRet {
     Ok(M::MalFun {
         eval: eval_ast,
         params: Rc::new(binds.clone()),
-        ast: Rc::new(M::List(exprs.to_vec())),
+        ast: Rc::new(M::List(MalArgs::new(exprs.to_vec()))),
         env,
     })
 }
@@ -123,7 +123,7 @@ fn apply(list: &MalArgs, env: Env) -> MalRet {
         M::Sym(sym) if sym == "fn*" => fn_star_form(cdr, env),
         M::Sym(sym) if sym == "help" => help_form(cdr, env),
         // Filter out special forms
-        _ => eval_func(&eval_ast(&M::List(list.to_vec()), env)?),
+        _ => eval_func(&eval_ast(&M::List(MalArgs::new(list.to_vec())), env)?),
     }
 }
 
@@ -140,11 +140,11 @@ pub fn eval(ast: &MalType, env: Env) -> MalRet {
 
 /// Separately evaluate all elements in a collection (list or vector)
 fn eval_collection(list: &MalArgs, env: Env) -> Result<MalArgs, MalErr> {
-    let mut ret = MalArgs::new();
-    for el in list {
+    let mut ret = Vec::new();
+    for el in list.as_ref() {
         ret.push(eval(el, env.clone())?);
     }
-    Ok(ret)
+    Ok(MalArgs::new(ret))
 }
 
 /// Evaluate the values of a map

@@ -69,7 +69,7 @@ impl Reader {
     fn read_list(&self, terminator: &str) -> MalRet {
         self.next()?;
 
-        let mut vector = MalArgs::new();
+        let mut vector = Vec::new();
 
         while self.peek()? != terminator {
             vector.push(self.read_form()?)
@@ -77,9 +77,9 @@ impl Reader {
         self.next()?;
 
         match terminator {
-            ")" => Ok(List(vector)),
-            "]" => Ok(Vector(vector)),
-            "}" => make_map(vector),
+            ")" => Ok(List(MalArgs::new(vector))),
+            "]" => Ok(Vector(MalArgs::new(vector))),
+            "}" => make_map(MalArgs::new(vector)),
             t => Err(MalErr::unrecoverable(
                 format!("Unknown collection terminator: {}", t).as_str(),
             )),

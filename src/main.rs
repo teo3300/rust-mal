@@ -19,9 +19,11 @@ fn main() {
     let reply_env = ns_init();
 
     // load all files passed as arguments
-    args().collect::<Vec<String>>()[1..]
-        .iter()
-        .for_each(|f| load_file(f, &reply_env));
+    args().collect::<Vec<String>>()[1..].iter().for_each(|f| {
+        if let Err(e) = load_file(f, &reply_env) {
+            println!("{}", e.message())
+        }
+    });
 
     interactive(reply_env);
 }

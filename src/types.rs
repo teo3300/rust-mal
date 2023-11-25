@@ -54,16 +54,27 @@ impl MalType {
 
 use crate::types::MalType as M;
 
-fn mal_eq(a: &M, b: &M) -> MalRet {
-    Ok(M::Bool(match (a, b) {
-        (M::Nil, M::Nil) => true,
-        (M::Bool(a), M::Bool(b)) => a == b,
-        (M::Int(a), M::Int(b)) => a == b,
-        (M::Key(a), M::Key(b)) | (M::Str(a), M::Str(b)) => a == b,
-        (M::List(a), M::List(b)) | (M::Vector(a), M::Vector(b)) => a
-            .iter()
-            .zip(b.iter())
-            .all(|(a, b)| matches!(mal_eq(a, b), Ok(M::Bool(true)))),
+fn mal_eq(a: &MalType, b: &[MalType]) -> MalRet {
+    Ok(M::Bool(match a {
+        M::Nil => b.iter().all(|el| matches!(el, M::Nil)),
+        M::Bool(a) => b.iter().all(|el| matches!(el, M::Bool(b) if a == b)),
+        M::Int(a) => b.iter().all(|el| matches!(el, M::Int(b)  if a == b)),
+        M::Key(a) => b.iter().all(|el| matches!(el, M::Key(b)  if a == b)),
+        M::Str(a) => b.iter().all(|el| matches!(el, M::Str(b)  if a == b)),
+        M::List(a) => b.iter().all(|el| {
+            matches!(el, M::List(b)
+                if a.len() == b.len()
+                && a.iter().zip(b.iter()).all(
+                    |(a, b)| matches!(mal_eq(a, &[b.clone()]),
+                        Ok(M::Bool(true)))))
+        }),
+        M::Vector(a) => b.iter().all(|el| {
+            matches!(el, M::Vector(b)
+                if a.len() == b.len()
+                && a.iter().zip(b.iter()).all(
+                    |(a, b)| matches!(mal_eq(a, &[b.clone()]),
+                        Ok(M::Bool(true)))))
+        }),
         _ => {
             return Err(MalErr::unrecoverable(
                 "Comparison not implemented for 'Map', 'Fun', 'MalFun' and 'Sym'",
@@ -73,10 +84,12 @@ fn mal_eq(a: &M, b: &M) -> MalRet {
 }
 
 pub fn mal_comp(args: &[MalType]) -> MalRet {
-    let (car, cdr) = car_cdr(args)?;
-    match cdr.len() {
+    match args.len() {
         0 => Ok(M::Bool(true)),
-        _ => mal_eq(car, &cdr[0]),
+        _ => {
+            let (car, cdr) = car_cdr(args)?;
+            mal_eq(car, cdr)
+        }
     }
 }
 
@@ -125,7 +138,7 @@ impl MalErr {
     }
 }
 
-pub type MalArgs = Vec<MalType>;
+pub type MalArgs = Rc<Vec<MalType>>;
 pub type MalMap = HashMap<String, MalType>;
 pub type MalRet = Result<MalType, MalErr>;
 

@@ -1,12 +1,12 @@
 use crate::env::Env;
 use crate::reader::Reader;
 use crate::step4_if_fn_do::rep;
-use crate::types::MalErr;
+use crate::types::{MalErr, MalRet, MalType::Nil};
 use regex::Regex;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
 
-pub fn load_file(filename: &str, env: &Env) {
+pub fn load_file(filename: &str, env: &Env) -> MalRet {
     let file_desc = File::open(filename);
     let file = match file_desc {
         Ok(file) => file,
@@ -36,22 +36,30 @@ pub fn load_file(filename: &str, env: &Env) {
                     Err(error) if error.is_recoverable() => Err(error),
                     tmp => {
                         parser.clear();
-                        tmp.map_err(|error| {
-                            println!("; Error @ {}", error.message());
-                            error
-                        })
+                        Ok(tmp.map_err(|error| {
+                            MalErr::unrecoverable(format!("; Error @ {}", error.message()).as_str())
+                        })?)
                     }
                 }
             }
-            Err(err) => eprintln!("Error reading line: {}", err),
+            Err(err) => {
+                return Err(MalErr::unrecoverable(
+                    format!("Error reading line: {}", err).as_str(),
+                ))
+            }
         }
     }
     if let Err(error) = last {
-        println!(
-            "; ERROR parsing: '{}'\n;   {}\n;   the environment is in an unknown state",
-            filename,
-            error.message()
-        )
+        Err(MalErr::unrecoverable(
+            format!(
+                "; ERROR parsing: '{}'\n;   {}\n;   the environment is in an unknown state",
+                filename,
+                error.message()
+            )
+            .as_str(),
+        ))
+    } else {
+        Ok(Nil)
     }
 }
 
