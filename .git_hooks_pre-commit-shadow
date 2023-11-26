@@ -1,1 +1,13 @@
-.git/hooks/pre-commit
+#!/usr/bin/env bash
+
+# Quit when first command fails
+set -e
+
+# format code in a consistent way
+cargo fmt
+
+# yeet on any clippy warning
+cargo clippy -- -Dwarnings
+
+# check test pass
+cargo test

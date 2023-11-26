@@ -50,7 +50,11 @@ pub fn ns_init() -> Env {
         "list?"     => Fun(|a| Ok(Bool(a.iter().all(|el| matches!(el, List(_))))), "Return true if the first argument is a list, false otherwise"),
         "empty?"    => Fun(|a| Ok(Bool(car(a)?.if_list()?.is_empty())), "Return true if the first parameter is an empty list, false otherwise, returns an error if the element is not a list"),
         "count"     => Fun(|a| Ok(Int(car(a)?.if_list()?.len() as isize)), "Return the number of elements in the first argument"),
+        "and"       => Fun(|a| Ok(Bool(a.iter().all(|a| !matches!(a, Nil | Bool(false))))), "Returns false if at least one of the arguments is 'false' or 'nil', true otherwise"),
+        "or"        => Fun(|a| Ok(Bool(a.iter().any(|a| !matches!(a, Nil | Bool(false))))), "Returns false if all the arguments are 'false' or 'nil', true otherwise"),
+        "xor"       => Fun(|a| Ok(Bool(a.iter().filter(|a| !matches!(a, Nil | Bool(false))).count() == 1)), "Returns true if one of the arguments is different from 'nil' or 'false', false otherwise"),
+        "not"       => Fun(|a| Ok(Bool(matches!(car(a)?, Nil | Bool(false)))), "Negate the first argument"),
         "="         => Fun(mal_comp, "Return true if the first two parameters are the same type and content, in case of lists propagate to all elements"),
-        "assert"    => Fun(mal_assert, "Panic if one of the arguments is false")
+        "assert"    => Fun(mal_assert, "Return an error if assertion fails")
     )
 }

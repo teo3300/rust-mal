@@ -4,11 +4,11 @@ use std::env::args;
 mod core;
 mod env;
 mod eval;
+mod mal_tests;
 mod parse_tools;
 mod printer;
 mod reader;
 mod step4_if_fn_do;
-mod tests;
 mod types;
 
 use core::ns_init;

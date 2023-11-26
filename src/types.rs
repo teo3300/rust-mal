@@ -94,11 +94,11 @@ pub fn mal_comp(args: &[MalType]) -> MalRet {
 }
 
 pub fn mal_assert(args: &[MalType]) -> MalRet {
-    args.iter().for_each(|i| match i {
-        M::Nil | M::Bool(false) => panic!(),
-        _ => (),
-    });
-    Ok(M::Nil)
+    if args.iter().any(|i| matches!(i, M::Nil | M::Bool(false))) {
+        Err(MalErr::unrecoverable("Assertion failed"))
+    } else {
+        Ok(M::Nil)
+    }
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -183,4 +183,41 @@ pub fn unescape_str(s: &str) -> String {
         .replace("\\\\", "\\")
         .replace("\\n", "\n")
         .replace("\\\"", "\"")
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Tests                                                                      //
+////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(test)]
+mod tests {
+    use crate::types::mal_assert;
+    use crate::types::MalType as M;
+
+    #[test]
+    fn _mal_assert() {
+        assert!(matches!(mal_assert(&[M::Nil]), Err(_)));
+        assert!(matches!(mal_assert(&[M::Bool(false)]), Err(_)));
+        assert!(matches!(mal_assert(&[M::Bool(true)]), Ok(_)));
+        assert!(matches!(mal_assert(&[M::Int(1)]), Ok(_)));
+    }
+
+    #[test]
+    fn _escape_str() {
+        use crate::types::escape_str;
+        assert_eq!(escape_str(""), "\"\""); // add quotations
+        assert_eq!(escape_str("\\"), "\"\\\\\""); // escape "\"
+        assert_eq!(escape_str("\n"), "\"\\n\""); // escape "\n"
+        assert_eq!(escape_str("\""), "\"\\\"\""); // escape "\""
+    }
+
+    #[test]
+    fn _unescape_str() {
+        use crate::types::unescape_str;
+        assert_eq!(unescape_str("\"\""), ""); // remove quotations
+        assert_eq!(unescape_str("\"a\""), "a"); // remove quotations
+        assert_eq!(unescape_str("\"\\\\\""), "\\"); // unescape "\"
+        assert_eq!(unescape_str("\"\\n\""), "\n"); // unescape "\n"
+        assert_eq!(unescape_str("\"\\\"\""), "\""); // unescape "\""
+    }
 }
