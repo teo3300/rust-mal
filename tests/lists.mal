@@ -1,0 +1,9 @@
+; list?
+(assert (list? (list 1 2 3)))
+(assert (not (list? 1)))
+
+; empty?
+(assert (empty? ()))
+(assert (empty? (list)))
+(assert (not (empty? ())))
+(assert (not (empty? (list (1 2 3)))))

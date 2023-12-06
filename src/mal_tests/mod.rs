@@ -1,22 +1,14 @@
 #[cfg(test)]
 mod functional {
 
-    macro_rules! load_file {
-        ($file:expr, $env:expr) => {{
-            match load_file($file, $env) {
-                Ok(v) => v,
-                Err(_) => {
-                    panic!()
-                }
-            }
-        }};
-    }
-
     macro_rules! test {
         ($file:expr) => {{
             use crate::core::ns_init;
             use crate::load_file;
-            load_file!(format!("tests/{}.mal", $file).as_str(), &ns_init());
+            assert!(matches!(
+                load_file(format!("tests/{}.mal", $file).as_str(), &ns_init()),
+                Ok(_)
+            ));
         }};
     }
 
@@ -38,6 +30,11 @@ mod functional {
     #[test]
     fn builtin_equals() {
         test!("equals");
+    }
+
+    #[test]
+    fn arithmetic() {
+        test!("arithmetic")
     }
 
     #[test]

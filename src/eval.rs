@@ -193,16 +193,47 @@ mod tests {
         }};
     }
 
+    macro_rules! load_f {
+        ($input:expr, $env:expr) => {{
+            use crate::reader::{read_str, Reader};
+            use std::rc::Rc;
+
+            let r = Reader::new();
+            r.push($input);
+            let args = match read_str(&r) {
+                Ok(v) => match v {
+                    MalType::List(v) => v,
+                    _ => panic!("Bad command"),
+                },
+                _ => panic!("Bad command"),
+            };
+            &MalType::List(Rc::new(if args.is_empty() {
+                Vec::new()
+            } else {
+                let f_str = match &args[0] {
+                    MalType::Sym(s) => s.as_str(),
+                    _ => panic!("Can't solve function"),
+                };
+                let f = match env_get(&$env.clone(), f_str) {
+                    Ok(v) => v,
+                    _ => panic!("No such function in env"),
+                };
+                [&[f], &args[1..]].concat()
+            }))
+        }};
+    }
+
     fn _env_empty() -> Env {
         use crate::env::env_new;
         env_new(None)
     }
 
     mod forms {
-
         use crate::env::env_get;
         use crate::eval::tests::_env_empty;
-        use crate::eval::{def_bang_form, do_form, let_star_form};
+        use crate::eval::{
+            def_bang_form, do_form, eval_ast, eval_func, fn_star_form, if_form, let_star_form,
+        };
         use crate::types::MalType;
 
         #[test]
@@ -271,7 +302,7 @@ mod tests {
         }
 
         #[test]
-        fn _do() {
+        fn _do_form() {
             let env = _env_empty();
             assert!(matches!(
                 do_form(load!("(do)"), env.clone()),
@@ -286,6 +317,84 @@ mod tests {
                 Ok(MalType::Int(2))
             ));
             assert!(matches!(env_get(&env.clone(), "a"), Ok(MalType::Int(1))));
+        }
+
+        #[test]
+        fn _if_form() {
+            let env = _env_empty();
+            assert!(matches!(
+                if_form(load!("(if)"), env.clone()),
+                Err(e) if !e.is_recoverable()));
+            assert!(matches!(
+                if_form(load!("(if 1)"), env.clone()),
+                Err(e) if !e.is_recoverable()));
+            assert!(matches!(
+                if_form(load!("(if 1 2 3 4)"), env.clone()),
+                Err(e) if !e.is_recoverable()));
+            assert!(matches!(
+                if_form(load!("(if nil 1)"), env.clone()),
+                Ok(MalType::Nil)
+            ));
+            assert!(matches!(
+                if_form(load!("(if nil 1 2)"), env.clone()),
+                Ok(MalType::Int(2))
+            ));
+            assert!(matches!(
+                if_form(load!("(if true 1)"), env.clone()),
+                Ok(MalType::Int(1))
+            ));
+            assert!(matches!(
+                if_form(load!("(if true 1 2)"), env.clone()),
+                Ok(MalType::Int(1))
+            ));
+        }
+
+        #[test]
+        fn fn_star() {
+            let env = _env_empty();
+            assert!(matches!(
+                fn_star_form(load!("(fn* (a b) 1 2)"), env.clone()),
+                Ok(MalType::MalFun { eval, params, ast, .. })
+                if eval == eval_ast
+                && matches!((*params).clone(), MalType::List(v)
+                    if matches!(&v[0], MalType::Sym(v) if v == "a")
+                    && matches!(&v[1], MalType::Sym(v) if v == "b")
+                && matches!((*ast).clone(), MalType::List(v)
+                    if matches!(&v[0], MalType::Int(1))
+                    && matches!(&v[1], MalType::Int(2))))));
+            // We trust the fact that the env does not do silly stuff
+            assert!(matches!(
+                fn_star_form(load!("(fn*)"), env.clone()),
+                Err(e) if !e.is_recoverable()));
+            assert!(matches!(
+                fn_star_form(load!("(fn* 1)"), env.clone()),
+                Err(e) if !e.is_recoverable()));
+        }
+
+        #[test]
+        fn _eval_func() {
+            let env = _env_empty();
+            assert!(matches!(
+                def_bang_form(load!("(def! or (fn* (a b) (if a a b)))"), env.clone()),
+                Ok(_)
+            ));
+            assert!(matches!(
+                eval_func(&MalType::Int(1)),
+                Err(e) if !e.is_recoverable()));
+            assert!(matches!(
+                eval_func(load_f!("()", env.clone())),
+                Err(e) if !e.is_recoverable()));
+            assert!(matches!(
+                eval_func(load_f!("(or nil nil)", env.clone())),
+                Ok(v) if matches!(v, MalType::Nil)));
+            assert!(matches!(
+                eval_func(load_f!("(or 1 nil)", env.clone())),
+                Ok(MalType::Int(1))
+            ));
+            assert!(matches!(
+                eval_func(load_f!("(or nil 1)", env.clone())),
+                Ok(MalType::Int(1))
+            ));
         }
     }
 }

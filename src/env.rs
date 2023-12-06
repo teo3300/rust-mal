@@ -40,7 +40,9 @@ pub fn env_binds(outer: Env, binds: &MalType, exprs: &[MalType]) -> Result<Env, 
     let env = env_new(Some(outer));
     let binds = binds.if_list()?;
     if binds.len() != exprs.len() {
-        return Err(MalErr::unrecoverable("Wrong number of arguments"));
+        return Err(MalErr::unrecoverable(
+            format!("Expected {} args, got {}", binds.len(), exprs.len()).as_str(),
+        ));
     } // TODO: May be possible to leave this be and not set additional elements at all
     for (bind, expr) in binds.iter().zip(exprs.iter()) {
         let bind = bind.if_symbol()?;
@@ -81,24 +83,26 @@ pub fn call_func(func: &MalType, args: &[MalType]) -> MalRet {
 }
 
 pub fn arithmetic_op(set: isize, f: fn(isize, isize) -> isize, args: &[MalType]) -> MalRet {
-    if args.is_empty() {
-        return Ok(M::Int(set));
-    }
-
-    let mut left = args[0].if_number()?;
-    if args.len() > 1 {
-        let right = &args[1..];
-        for el in right {
-            left = f(left, el.if_number()?);
+    Ok(M::Int(match args.len() {
+        0 => set,
+        1 => f(set, args[0].if_number()?),
+        _ => {
+            // TODO: Maybe an accumulator
+            let mut left = args[0].if_number()?;
+            for el in &args[1..] {
+                left = f(left, el.if_number()?);
+            }
+            left
         }
-    }
-
-    Ok(M::Int(left))
+    }))
 }
 
 use MalType::{Bool, Nil};
 
 pub fn comparison_op(f: fn(isize, isize) -> bool, args: &[MalType]) -> MalRet {
+    if args.is_empty() {
+        return Ok(Nil);
+    }
     let (left, rights) = car_cdr(args)?;
     let mut left = left.if_number()?;
     for right in rights {
