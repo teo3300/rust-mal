@@ -176,20 +176,26 @@ mod tests {
 
     use crate::env::Env;
 
-    macro_rules! load {
+    macro_rules! load2 {
         ($input:expr) => {{
-            use crate::env::cdr;
             use crate::reader::{read_str, Reader};
 
             let r = Reader::new();
             r.push($input);
-            cdr(&match read_str(&r) {
+            &match read_str(&r) {
                 Ok(v) => match v {
                     MalType::List(v) => v,
-                    _ => panic!("Bad command"),
+                    _ => panic!("Not a list"),
                 },
                 _ => panic!("Bad command"),
-            })
+            }
+        }};
+    }
+
+    macro_rules! load {
+        ($input:expr) => {{
+            use crate::env::cdr;
+            cdr(load2!($input))
         }};
     }
 
@@ -232,7 +238,8 @@ mod tests {
         use crate::env::env_get;
         use crate::eval::tests::_env_empty;
         use crate::eval::{
-            def_bang_form, do_form, eval_ast, eval_func, fn_star_form, if_form, let_star_form,
+            apply, def_bang_form, do_form, eval_ast, eval_func, fn_star_form, if_form,
+            let_star_form,
         };
         use crate::types::MalType;
 
@@ -395,6 +402,16 @@ mod tests {
                 eval_func(load_f!("(or nil 1)", env.clone())),
                 Ok(MalType::Int(1))
             ));
+        }
+
+        #[test]
+        fn _apply() {
+            let env = _env_empty();
+            assert!(matches!(
+                apply(load2!("(def! a 1)"), env.clone()),
+                Ok(MalType::Int(1))
+            ));
+            assert!(matches!(env_get(&env, "a"), Ok(MalType::Int(1))));
         }
     }
 }
