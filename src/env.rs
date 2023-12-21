@@ -60,12 +60,15 @@ macro_rules! scream {
 use crate::printer::prt;
 use crate::types::MalType as M;
 
-pub fn call_func(
-    func: &MalType,
-    args: &[MalType],
-) -> Result<(Option<MalType>, Option<(MalType, Env)>), MalErr> {
+pub enum CallFunc {
+    Builtin(MalType),
+    MalFun(MalType, Env),
+}
+pub type CallRet = Result<CallFunc, MalErr>;
+
+pub fn call_func(func: &MalType, args: &[MalType]) -> CallRet {
     match func {
-        M::Fun(func, _) => Ok((Some(func(args)?), None)),
+        M::Fun(func, _) => Ok(CallFunc::Builtin(func(args)?)),
         M::MalFun {
             // eval,
             params,
@@ -77,7 +80,10 @@ pub fn call_func(
             // It's fine to clone the environment here
             // since this is when the function is actually called
             match ast.as_ref() {
-                M::List(list) => Ok((None, Some((list.last().unwrap_or(&Nil).clone(), inner_env)))),
+                M::List(list) => Ok(CallFunc::MalFun(
+                    list.last().unwrap_or(&Nil).clone(),
+                    inner_env,
+                )),
                 _ => scream!(),
             }
         }

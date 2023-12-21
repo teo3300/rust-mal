@@ -108,7 +108,7 @@ pub fn mal_assert_eq(args: &[MalType]) -> MalRet {
             let mut message = String::from("Assertion-eq failed: [");
             message.push_str(
                 args.iter()
-                    .map(|i| prt(i))
+                    .map(prt)
                     .collect::<Vec<String>>()
                     .join(" ")
                     .as_str(),

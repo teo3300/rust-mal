@@ -1,4 +1,4 @@
-use crate::env::{call_func, car_cdr};
+use crate::env::{call_func, car_cdr, CallFunc, CallRet};
 use crate::env::{env_get, env_new, env_set};
 use crate::env::{first_last, Env};
 use crate::printer::prt;
@@ -8,7 +8,7 @@ use std::rc::Rc;
 
 /// Resolve the first element of the list as the function name and call it
 /// with the other elements as arguments
-fn eval_func(list: &MalType) -> Result<(Option<MalType>, Option<(MalType, Env)>), MalErr> {
+fn eval_func(list: &MalType) -> CallRet {
     let list = list.if_list()?;
     let (func, args) = car_cdr(list)?;
     call_func(func, args)
@@ -138,12 +138,11 @@ pub fn eval(ast: &MalType, env: Env) -> MalRet {
                         let eval_ret = eval_func(apply_list)?;
 
                         match eval_ret {
-                            (Some(ret), None) => return Ok(ret),
-                            (None, Some(ret)) => {
-                                ast = ret.0;
-                                env = ret.1;
+                            CallFunc::Builtin(ret) => return Ok(ret),
+                            CallFunc::MalFun(fun_ast, fun_env) => {
+                                ast = fun_ast;
+                                env = fun_env;
                             }
-                            _ => panic!("# You should not be here"),
                         }
                     }
                 };
