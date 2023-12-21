@@ -1,10 +1,9 @@
 (def! n-fib (fn* (n)
-    (if (<= n 0) 0      ; 0 base case
-        (if (= n 1) 1   ; 1 base case
-            (+ (n-fib (- n 1)) (n-fib (- n 2))))))) ; recursive
+    (if (< n 2) n                              ; base
+        (+ (n-fib (- n 1)) (n-fib (- n 2)))))) ; recursive
 
 (def! assert-fib (fn* (n expected)  ; check fibonacci result
-    (if (= (n-fib n) expected) nil
+    (if (not (= (n-fib n) expected))
         (do (prn (list
                 "Expected"
                 expected

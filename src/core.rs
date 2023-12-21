@@ -31,7 +31,7 @@ macro_rules! env_init {
 
 use crate::printer::prt;
 use crate::types::MalType::{Bool, Fun, Int, List, Nil, Str};
-use crate::types::{mal_assert, mal_comp, MalArgs};
+use crate::types::{mal_assert, mal_assert_eq, mal_comp, MalArgs};
 
 pub fn ns_init() -> Env {
     env_init!(None,
@@ -55,6 +55,7 @@ pub fn ns_init() -> Env {
         "xor"       => Fun(|a| Ok(Bool(a.iter().filter(|a| !matches!(a, Nil | Bool(false))).count() == 1)), "Returns true if one of the arguments is different from 'nil' or 'false', false otherwise"),
         "not"       => Fun(|a| Ok(Bool(matches!(car(a)?, Nil | Bool(false)))), "Negate the first argument"),
         "="         => Fun(mal_comp, "Return true if the first two parameters are the same type and content, in case of lists propagate to all elements"),
-        "assert"    => Fun(mal_assert, "Return an error if assertion fails")
+        "assert"    => Fun(mal_assert, "Return an error if assertion fails"),
+        "assert-eq" => Fun(mal_assert_eq, "Return an error if arguments are not the same")
     )
 }

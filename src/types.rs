@@ -9,7 +9,7 @@ pub enum MalType {
     Map(MalMap),
     Fun(fn(&[MalType]) -> MalRet, &'static str), // Used for base functions, implemented using the underlying language (rust)
     MalFun {
-        eval: fn(ast: &MalType, env: Env) -> MalRet,
+        // eval: fn(ast: &MalType, env: Env) -> MalRet,
         params: Rc<MalType>,
         ast: Rc<MalType>,
         env: Env,
@@ -98,6 +98,25 @@ pub fn mal_assert(args: &[MalType]) -> MalRet {
         Err(MalErr::unrecoverable("Assertion failed"))
     } else {
         Ok(M::Nil)
+    }
+}
+
+pub fn mal_assert_eq(args: &[MalType]) -> MalRet {
+    let (car, cdr) = car_cdr(args)?;
+    match mal_eq(car, cdr)? {
+        M::Nil | M::Bool(false) => {
+            let mut message = String::from("Assertion-eq failed: [");
+            message.push_str(
+                args.iter()
+                    .map(|i| prt(i))
+                    .collect::<Vec<String>>()
+                    .join(" ")
+                    .as_str(),
+            );
+            message.push(']');
+            Err(MalErr::unrecoverable(message.as_str()))
+        }
+        _ => Ok(M::Nil),
     }
 }
 

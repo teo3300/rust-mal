@@ -51,18 +51,23 @@ pub fn env_binds(outer: Env, binds: &MalType, exprs: &[MalType]) -> Result<Env, 
     Ok(env)
 }
 
-pub fn scream() -> MalRet {
-    panic!("If this messagge occurs, something went terribly wrong")
+macro_rules! scream {
+    () => {
+        panic!("If this messagge occurs, something went terribly wrong")
+    };
 }
 
 use crate::printer::prt;
 use crate::types::MalType as M;
 
-pub fn call_func(func: &MalType, args: &[MalType]) -> MalRet {
+pub fn call_func(
+    func: &MalType,
+    args: &[MalType],
+) -> Result<(Option<MalType>, Option<(MalType, Env)>), MalErr> {
     match func {
-        M::Fun(func, _) => func(args),
+        M::Fun(func, _) => Ok((Some(func(args)?), None)),
         M::MalFun {
-            eval,
+            // eval,
             params,
             ast,
             env,
@@ -71,9 +76,9 @@ pub fn call_func(func: &MalType, args: &[MalType]) -> MalRet {
             let inner_env = env_binds(env.clone(), params, args)?;
             // It's fine to clone the environment here
             // since this is when the function is actually called
-            match eval(ast, inner_env)? {
-                M::List(list) => Ok(list.last().unwrap_or(&Nil).clone()),
-                _ => scream(),
+            match ast.as_ref() {
+                M::List(list) => Ok((None, Some((list.last().unwrap_or(&Nil).clone(), inner_env)))),
+                _ => scream!(),
             }
         }
         _ => Err(MalErr::unrecoverable(
@@ -133,6 +138,26 @@ pub fn cdr(list: &[MalType]) -> &[MalType] {
 /// Extract the car and cdr from a list
 pub fn car_cdr(list: &[MalType]) -> Result<(&MalType, &[MalType]), MalErr> {
     Ok((car(list)?, cdr(list)))
+}
+
+fn first(list: &[MalType]) -> &[MalType] {
+    if list.len() > 1 {
+        &list[..list.len() - 1]
+    } else {
+        &list[0..0]
+    }
+}
+
+// FIXME: Treat as result for now, change later
+fn last(list: &[MalType]) -> Result<&MalType, MalErr> {
+    match list.len() {
+        0 => Err(MalErr::unrecoverable("Mi sono cacato le mutande")),
+        _ => Ok(&list[0]),
+    }
+}
+
+pub fn first_last(list: &[MalType]) -> (&[MalType], Result<&MalType, MalErr>) {
+    (first(list), last(list))
 }
 
 use std::process::exit;
