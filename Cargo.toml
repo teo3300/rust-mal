@@ -6,4 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-regex = "1.8.3"
+regex = "1.10.2"     # An implementation of regular expressions for Rust. This implementation uses finite automata …
+rustyline = "13.0.0" # Rustyline, a readline implementation based on Antirez's Linenoise
