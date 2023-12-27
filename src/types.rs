@@ -50,6 +50,15 @@ impl MalType {
             )),
         }
     }
+
+    pub fn if_string(&self) -> Result<&str, MalErr> {
+        match self {
+            Self::Str(sym) => Ok(sym),
+            _ => Err(MalErr::unrecoverable(
+                format!("{:?} is not a string", prt(self)).as_str(),
+            )),
+        }
+    }
 }
 
 use crate::types::MalType as M;
@@ -120,12 +129,13 @@ pub fn mal_assert_eq(args: &[MalType]) -> MalRet {
     }
 }
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum Severity {
     Recoverable,
     Unrecoverable,
 }
 
+#[derive(Debug)]
 pub struct MalErr {
     message: String,
     severity: Severity,

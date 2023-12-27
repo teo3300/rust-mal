@@ -5,8 +5,11 @@ mod functional {
         ($file:expr) => {{
             use crate::core::ns_init;
             use crate::load_file;
+            use crate::parse_tools::load_core;
+            let env = ns_init();
+            load_core(&env);
             assert!(matches!(
-                load_file(format!("tests/{}.mal", $file).as_str(), &ns_init()),
+                load_file(format!("tests/{}.mal", $file).as_str(), &env),
                 Ok(_)
             ));
         }};

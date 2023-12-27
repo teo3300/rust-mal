@@ -1,4 +1,4 @@
-use crate::env::{call_func, car_cdr, CallFunc, CallRet};
+use crate::env::{self, call_func, car_cdr, CallFunc, CallRet};
 use crate::env::{env_get, env_new, env_set};
 use crate::env::{first_last, Env};
 use crate::printer::prt;
@@ -104,14 +104,26 @@ fn fn_star_form(list: &[MalType], env: Env) -> MalRet {
 use crate::printer::print_malfun;
 
 pub fn help_form(list: &[MalType], env: Env) -> MalRet {
-    let (sym, _) = car_cdr(list)?;
-    let sym_str = sym.if_symbol()?;
-    match eval(sym, env.clone())? {
-        M::Fun(_, desc) => println!("{}\t[builtin]: {}", sym_str, desc),
-        M::MalFun { params, ast, .. } => print_malfun(sym_str, params, ast),
-        _ => println!("{}\t[symbol]: {}", sym_str, prt(&env_get(&env, sym_str)?)),
+    if list.is_empty() {
+        eprintln!("\t[defined symbols]:\n{}", env.keys())
+    } else {
+        let (sym, _) = car_cdr(list)?;
+        let sym_str = sym.if_symbol()?;
+        match eval(sym, env.clone())? {
+            M::Fun(_, desc) => println!("{}\t[builtin]: {}", sym_str, desc),
+            M::MalFun { params, ast, .. } => print_malfun(sym_str, params, ast),
+            _ => eprintln!("{}\t[symbol]: {}", sym_str, prt(&env_get(&env, sym_str)?)),
+        }
     }
     Ok(M::Bool(true))
+}
+
+pub fn outermost(env: &Env) -> Env {
+    let mut env = env;
+    while let Some(ref e) = env.outer {
+        env = e;
+    }
+    env.clone()
 }
 
 /// Intermediate function to discern special forms from defined symbols
@@ -130,11 +142,17 @@ pub fn eval(ast: &MalType, env: Env) -> MalRet {
                     M::Sym(sym) if sym == "if" => ast = if_form(cdr, env.clone())?,
                     M::Sym(sym) if sym == "fn*" => return fn_star_form(cdr, env.clone()),
                     M::Sym(sym) if sym == "help" => return help_form(cdr, env.clone()),
+                    // Special form, sad
+                    // Bruh, is basically double eval
+                    M::Sym(sym) if sym == "eval" => {
+                        ast = eval(env::car(cdr)?, env.clone())?;
+                        // Climb to the outermost environment (The repl env)
+                        env = outermost(&env);
+                    }
                     // Filter out special forms
                     // "apply"/invoke
                     _ => {
-                        let apply_list =
-                            &eval_ast(&M::List(MalArgs::new(list.to_vec())), env.clone())?;
+                        let apply_list = &eval_ast(&ast, env.clone())?;
                         let eval_ret = eval_func(apply_list)?;
 
                         match eval_ret {

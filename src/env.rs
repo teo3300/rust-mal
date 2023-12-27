@@ -6,7 +6,20 @@ use std::rc::Rc;
 #[derive(Clone, Debug)]
 pub struct EnvType {
     data: RefCell<MalMap>,
-    outer: Option<Env>,
+    pub outer: Option<Env>,
+}
+
+impl EnvType {
+    pub fn keys(&self) -> String {
+        let mut keys = self
+            .data
+            .borrow()
+            .iter()
+            .map(|(k, _)| k.clone())
+            .collect::<Vec<String>>();
+        keys.sort_unstable();
+        keys.join(" ")
+    }
 }
 
 pub type Env = Rc<EnvType>;
@@ -158,7 +171,7 @@ fn first(list: &[MalType]) -> &[MalType] {
 fn last(list: &[MalType]) -> Result<&MalType, MalErr> {
     match list.len() {
         0 => Err(MalErr::unrecoverable("Mi sono cacato le mutande")),
-        _ => Ok(&list[0]),
+        _ => Ok(&list[list.len() - 1]),
     }
 }
 

@@ -1,19 +1,65 @@
 use crate::env::Env;
-use crate::reader::Reader;
-use crate::step5_tco::rep;
+use crate::eval::eval;
+use crate::reader::{read_str, Reader};
+use crate::step6_file::rep;
 use crate::types::{MalErr, MalRet, MalType::Nil};
 use regex::Regex;
+use std::env;
 use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Read};
+use std::path::Path;
 use std::process::exit;
+
+pub fn load_core(env: &Env) {
+    eval_str("(def! not (fn* (x) (if x nil true)))", &env).unwrap();
+    eval_str(
+        "(def! load-file (fn* (f) (eval (read-string (str \"(do \" (slurp f) \"\nnil)\")))))",
+        &env,
+    )
+    .unwrap();
+}
+
+fn eval_str(line: &str, env: &Env) -> MalRet {
+    eval(&read_str(Reader::new().push(line))?, env.clone())
+}
+
+pub fn load_conf(work_env: &Env) {
+    const CONFIG: &str = "config.mal";
+    let home = match env::var("MAL_HOME") {
+        Ok(s) => s,
+        Err(_) => env::var("HOME").unwrap() + "/.config/mal",
+    };
+    let config = home + "/" + CONFIG;
+
+    if Path::new(&config).exists() {
+        match load_file(&config, work_env) {
+            Err(e) => eprintln!("{}", e.message()),
+            _ => (),
+        }
+    }
+}
+
+pub fn read_file(filename: &str) -> Result<String, MalErr> {
+    let mut file = File::open(filename).map_err(|_| {
+        MalErr::unrecoverable(format!("Failed to open file '{}'", filename).as_str())
+    })?;
+    let mut content = String::new();
+
+    file.read_to_string(&mut content).map_err(|_| {
+        MalErr::unrecoverable(format!("Failed to read content of '{}'", filename).as_str())
+    })?;
+
+    Ok(content)
+}
 
 pub fn load_file(filename: &str, env: &Env) -> MalRet {
     let file_desc = File::open(filename);
     let file = match file_desc {
         Ok(file) => file,
         Err(_) => {
-            println!("Unable to open file: '{}'", filename);
-            exit(1)
+            return Err(MalErr::unrecoverable(
+                format!("; WARNING: Unable to open file: {}", filename).as_str(),
+            ));
         }
     };
     let reader = BufReader::new(file);
@@ -103,13 +149,13 @@ pub fn interactive(env: Env) {
 
                     // Perform rep on whole available input
                     match rep(&parser, &env) {
-                        Ok(output) => output.iter().for_each(|el| println!("[{}]> {}", num, el)),
+                        Ok(output) => output.iter().for_each(|el| eprintln!("[{}]> {}", num, el)),
                         Err(error) => {
                             if error.is_recoverable() {
                                 // && line != "\n" {
                                 continue;
                             }
-                            println!("; [{}]> Error @ {}", num, error.message());
+                            eprintln!("; [{}]> Error @ {}", num, error.message());
                         }
                     }
                     num += 1;

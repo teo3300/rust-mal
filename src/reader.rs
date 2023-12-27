@@ -25,10 +25,11 @@ impl Reader {
         }
     }
 
-    pub fn push(&self, input: &str) {
+    pub fn push(&self, input: &str) -> &Self {
         self.ptr.set(0);
         // reset the state of the parser and push the additional strings
         self.tokens.borrow_mut().append(&mut tokenize(input));
+        self
     }
 
     pub fn clear(&self) {
