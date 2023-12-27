@@ -11,10 +11,10 @@ use std::path::Path;
 use std::process::exit;
 
 pub fn load_core(env: &Env) {
-    eval_str("(def! not (fn* (x) (if x nil true)))", &env).unwrap();
+    eval_str("(def! not (fn* (x) (if x nil true)))", env).unwrap();
     eval_str(
         "(def! load-file (fn* (f) (eval (read-string (str \"(do \" (slurp f) \"\nnil)\")))))",
-        &env,
+        env,
     )
     .unwrap();
 }
@@ -32,9 +32,8 @@ pub fn load_conf(work_env: &Env) {
     let config = home + "/" + CONFIG;
 
     if Path::new(&config).exists() {
-        match load_file(&config, work_env) {
-            Err(e) => eprintln!("{}", e.message()),
-            _ => (),
+        if let Err(e) = load_file(&config, work_env) {
+            eprintln!("{}", e.message())
         }
     }
 }

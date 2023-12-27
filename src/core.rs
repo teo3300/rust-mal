@@ -36,7 +36,7 @@ use crate::types::MalType::{Bool, Fun, Int, List, Nil, Str};
 use crate::types::{mal_assert, mal_assert_eq, mal_comp, MalArgs};
 
 pub fn ns_init() -> Env {
-    let env_t = env_init!(None,
+    env_init!(None,
         "test"          => Fun(|_| Ok(Str("This is a test function".to_string())), "Just a test function"),
         "exit"          => Fun(mal_exit, "Quits the program with specified status"),
         "+"             => Fun(|a| arithmetic_op(0, |a, b| a + b, a), "Returns the sum of the arguments"),
@@ -63,8 +63,7 @@ pub fn ns_init() -> Env {
         "="             => Fun(mal_comp, "Return true if the first two parameters are the same type and content, in case of lists propagate to all elements"),
         "assert"        => Fun(mal_assert, "Return an error if assertion fails"),
         "assert-eq"     => Fun(mal_assert_eq, "Return an error if arguments are not the same"),
-        "read-string"   => Fun(|a| read_str(&Reader::new().push(car(a)?.if_string()?)), "Tokenize and read the first argument"),
+        "read-string"   => Fun(|a| read_str(Reader::new().push(car(a)?.if_string()?)), "Tokenize and read the first argument"),
         "slurp"         => Fun(|a| Ok(Str(read_file(car(a)?.if_string()?)?)), "Read a file and return the content as a string")
-    );
-    env_t
+    )
 }

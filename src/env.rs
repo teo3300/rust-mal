@@ -3,7 +3,7 @@ use crate::types::{MalMap, MalRet, MalType};
 use std::cell::RefCell;
 use std::rc::Rc;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct EnvType {
     data: RefCell<MalMap>,
     pub outer: Option<Env>,

@@ -2,7 +2,7 @@ use crate::env::{car_cdr, Env};
 use std::{collections::HashMap, rc::Rc};
 
 // All Mal types should inherit from this
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum MalType {
     List(MalArgs),
     Vector(MalArgs),
