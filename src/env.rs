@@ -10,7 +10,7 @@ pub struct EnvType {
 }
 
 impl EnvType {
-    pub fn keys(&self) -> String {
+    pub fn keys(&self) -> Vec<String> {
         let mut keys = self
             .data
             .borrow()
@@ -18,7 +18,7 @@ impl EnvType {
             .map(|(k, _)| k.clone())
             .collect::<Vec<String>>();
         keys.sort_unstable();
-        keys.join(" ")
+        keys
     }
 }
 
@@ -51,7 +51,7 @@ pub fn env_get(env: &Env, sym: &str) -> MalRet {
 
 pub fn env_binds(outer: Env, binds: &MalType, exprs: &[MalType]) -> Result<Env, MalErr> {
     let env = env_new(Some(outer));
-    let binds = binds.if_list()?;
+    let binds = binds.if_vec()?;
     if binds.len() != exprs.len() {
         return Err(MalErr::unrecoverable(
             format!("Expected {} args, got {}", binds.len(), exprs.len()).as_str(),

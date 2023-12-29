@@ -42,6 +42,15 @@ impl MalType {
         }
     }
 
+    pub fn if_vec(&self) -> Result<&[MalType], MalErr> {
+        match self {
+            Self::Vector(list) => Ok(list),
+            _ => Err(MalErr::unrecoverable(
+                format!("{:?} is not a vector", prt(self)).as_str(),
+            )),
+        }
+    }
+
     pub fn if_symbol(&self) -> Result<&str, MalErr> {
         match self {
             Self::Sym(sym) => Ok(sym),

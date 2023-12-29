@@ -1,8 +1,8 @@
-(def! n-fib (fn* (n)
+(def! n-fib (fn* [n]
     (if (< n 2) n                              ; base
         (+ (n-fib (- n 1)) (n-fib (- n 2)))))) ; recursive
 
-(def! assert-fib (fn* (n expected)  ; check fibonacci result
+(def! assert-fib (fn* [n expected]  ; check fibonacci result
     (if (not (= (n-fib n) expected))
         (do (prn (list
                 "Expected"

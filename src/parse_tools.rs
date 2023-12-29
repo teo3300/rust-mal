@@ -11,9 +11,14 @@ use std::path::Path;
 use std::process::exit;
 
 pub fn load_core(env: &Env) {
-    eval_str("(def! not (fn* (x) (if x nil true)))", env).unwrap();
+    eval_str("(def! not (fn* [x] (if x nil true)))", env).unwrap();
     eval_str(
-        "(def! load-file (fn* (f) (eval (read-string (str \"(do \" (slurp f) \"\nnil)\")))))",
+        "(def! load-file (fn* [f] (eval (read-string (str \"(do \" (slurp f) \"\nnil)\")))))",
+        env,
+    )
+    .unwrap();
+    eval_str(
+        "(def! conf-reload (fn* [] (load-file (str MAL_HOME \"/\" \"config.mal\"))))",
         env,
     )
     .unwrap();
@@ -29,6 +34,8 @@ pub fn load_conf(work_env: &Env) {
         Ok(s) => s,
         Err(_) => env::var("HOME").unwrap() + "/.config/mal",
     };
+    // Add config path to mal
+    eval_str(format!("(def! MAL_HOME \"{home}\")").as_str(), work_env).unwrap();
     let config = home + "/" + CONFIG;
 
     if Path::new(&config).exists() {

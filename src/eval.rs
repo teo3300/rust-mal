@@ -53,7 +53,7 @@ fn let_star_form(list: &[MalType], env: Env) -> Result<(MalType, Env), MalErr> {
     let inner_env = env_new(Some(env.clone()));
     // change the inner environment
     let (car, cdr) = car_cdr(list)?;
-    let list = car.if_list()?;
+    let list = car.if_vec()?;
     if list.len() % 2 != 0 {
         return Err(MalErr::unrecoverable(
             "let* form, number of arguments must be even",
@@ -92,7 +92,7 @@ fn if_form(list: &[MalType], env: Env) -> MalRet {
 
 fn fn_star_form(list: &[MalType], env: Env) -> MalRet {
     let (binds, exprs) = car_cdr(list)?;
-    binds.if_list()?;
+    binds.if_vec()?;
     Ok(M::MalFun {
         // eval: eval_ast,
         params: Rc::new(binds.clone()),
@@ -104,18 +104,24 @@ fn fn_star_form(list: &[MalType], env: Env) -> MalRet {
 use crate::printer::print_malfun;
 
 pub fn help_form(list: &[MalType], env: Env) -> MalRet {
-    if list.is_empty() {
-        eprintln!("\t[defined symbols]:\n{}", env.keys())
-    } else {
-        let (sym, _) = car_cdr(list)?;
-        let sym_str = sym.if_symbol()?;
-        match eval(sym, env.clone())? {
-            M::Fun(_, desc) => println!("{}\t[builtin]: {}", sym_str, desc),
-            M::MalFun { params, ast, .. } => print_malfun(sym_str, params, ast),
-            _ => eprintln!("{}\t[symbol]: {}", sym_str, prt(&env_get(&env, sym_str)?)),
-        }
+    let (sym, _) = car_cdr(list)?;
+    let sym_str = sym.if_symbol()?;
+    match eval(sym, env.clone())? {
+        M::Fun(_, desc) => println!("{}\t[builtin]: {}\n", sym_str, desc),
+        M::MalFun { params, ast, .. } => print_malfun(sym_str, params, ast),
+        _ => eprintln!("{}\t[symbol]: {}\n", sym_str, prt(&env_get(&env, sym_str)?)),
     }
-    Ok(M::Bool(true))
+    Ok(M::Nil)
+}
+
+pub fn find_form(list: &[MalType], env: Env) -> MalRet {
+    let mut filtered = env.keys();
+    for mat in list {
+        let mat = mat.if_symbol()?;
+        filtered.retain(|x| x.contains(mat));
+    }
+    eprintln!("\t[matches]:\n{}\n", filtered.join(" "));
+    Ok(M::Nil)
 }
 
 pub fn outermost(env: &Env) -> Env {
@@ -142,6 +148,7 @@ pub fn eval(ast: &MalType, env: Env) -> MalRet {
                     M::Sym(sym) if sym == "if" => ast = if_form(cdr, env.clone())?,
                     M::Sym(sym) if sym == "fn*" => return fn_star_form(cdr, env.clone()),
                     M::Sym(sym) if sym == "help" => return help_form(cdr, env.clone()),
+                    M::Sym(sym) if sym == "find" => return find_form(cdr, env.clone()),
                     // Special form, sad
                     // Bruh, is basically double eval
                     M::Sym(sym) if sym == "eval" => {
@@ -324,7 +331,7 @@ mod tests {
                 matches!(let_star_form(load!("(let* 1)"), env.clone()), Err(e) if !e.is_recoverable())
             );
             assert!(
-                matches!(let_star_form(load!("(let* (a))"), env.clone()), Err(e) if !e.is_recoverable())
+                matches!(let_star_form(load!("(let* [a])"), env.clone()), Err(e) if !e.is_recoverable())
             ); /*
                assert!(matches!(
                    let_star_form(load!("(let* ())"), env.clone()),
@@ -400,9 +407,9 @@ mod tests {
         fn fn_star() {
             let env = _env_empty();
             assert!(matches!(
-                fn_star_form(load!("(fn* (a b) 1 2)"), env.clone()),
+                fn_star_form(load!("(fn* [a b] 1 2)"), env.clone()),
                 Ok(MalType::MalFun {params, ast, .. })
-                if matches!((*params).clone(), MalType::List(v)
+                if matches!((*params).clone(), MalType::Vector(v)
                     if matches!(&v[0], MalType::Sym(v) if v == "a")
                     && matches!(&v[1], MalType::Sym(v) if v == "b")
                 && matches!((*ast).clone(), MalType::List(v)
