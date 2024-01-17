@@ -69,11 +69,12 @@ use rustyline::DefaultEditor;
 pub fn interactive(env: Env) {
     const HISTORY: &str = ".mal-history";
     let home = get_home_path(&env).unwrap();
+    let history = home + "/" + HISTORY;
 
     // Using "Editor" instead of the standard I/O because I hate myself but not this much
     // TODO: remove unwrap and switch to a better error handling
     let mut rl = DefaultEditor::new().unwrap();
-    if rl.load_history(&(home + "/" + HISTORY)).is_err() {
+    if rl.load_history(&history).is_err() {
         eprintln!("; Failed to load history");
     }
 
@@ -96,7 +97,7 @@ pub fn interactive(env: Env) {
                 Ok(line) => {
                     // TODO: should handle this in a different way
                     rl.add_history_entry(&line).unwrap();
-                    rl.save_history(HISTORY).unwrap();
+                    rl.save_history(&history).unwrap();
 
                     parser.push(&line);
 

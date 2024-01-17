@@ -102,7 +102,7 @@ impl Reader {
                     if tk.len() > 2 && tk.ends_with('\"') {
                         Ok(Str(unescape_str(tk)))
                     } else {
-                        Err(MalErr::recoverable(
+                        Err(MalErr::unrecoverable(
                             "End of line reached without closing string",
                         ))
                     }
