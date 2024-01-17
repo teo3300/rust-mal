@@ -108,7 +108,7 @@ impl Reader {
                 } else if tk.starts_with(':') {
                     return Ok(Key(format!("ʞ{}", tk)));
                 }
-                return Ok(Sym(tk.to_string()));
+                Ok(Sym(tk.to_string()))
             }
         }
     }
