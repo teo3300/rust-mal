@@ -129,7 +129,11 @@ impl Reader {
 /// Create anew Reader with the tokens
 /// Call read_from with the reader instance
 pub fn read_str(reader: &Reader) -> MalRet {
-    reader.read_form()
+    let mut ret = Nil;
+    while !reader.ended() {
+        ret = reader.read_form()?;
+    }
+    Ok(ret)
 }
 
 /// Read a string and return a list of tokens in it (following regex in README)
