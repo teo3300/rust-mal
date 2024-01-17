@@ -1,6 +1,25 @@
 ;; Previously in core.rs
+; Logic
 (def! not (fn* [x]
     (if x nil true)))
+
+(def! and (fn* [a b]
+    (if a
+        b)))
+
+(def! or (fn* [a b]
+    (if a
+        true
+        b)))
+
+(def! xor (fn* [a b]
+    (if a
+        (not b)
+        b)))
+
+; Other functions in core.rs
+(def! assert-eq (fn* [a b]
+    (assert (= a b))))
 
 (def! empty? (fn* [l]
     (= (count l) 0)))

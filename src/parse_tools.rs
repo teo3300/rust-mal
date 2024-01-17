@@ -14,8 +14,9 @@ fn eval_str(line: &str, env: &Env) -> MalRet {
 
 pub fn set_home_path(env: &Env) {
     eval_str(
-        "(or (def! MAL_HOME (env \"MAL_HOME\"))
-                (def! MAL_HOME (str (env \"HOME\") \"/.config/mal\")))",
+        "(if (env \"MAL_HOME\")
+        (def! MAL_HOME (env \"MAL_HOME\")) 
+        (def! MAL_HOME (str (env \"HOME\") \"/.config/mal\")))",
         env,
     )
     .unwrap();

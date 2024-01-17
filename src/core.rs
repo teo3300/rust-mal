@@ -1,6 +1,6 @@
 use std::env;
 
-use crate::env::{arithmetic_op, car, comparison_op, env_new, env_set, mal_exit, Env};
+use crate::env::{any_zero, arithmetic_op, car, comparison_op, env_new, env_set, mal_exit, Env};
 
 // This is the first time I implement a macro, and I'm copying it
 // so I will comment this a LOT
@@ -35,16 +35,17 @@ use crate::parse_tools::read_file;
 use crate::printer::pr_str;
 use crate::reader::{read_str, Reader};
 use crate::types::MalType::{Bool, Fun, Int, List, Nil, Str};
-use crate::types::{mal_assert, mal_assert_eq, mal_comp, MalArgs, MalErr};
+use crate::types::{mal_assert, mal_comp, MalArgs, MalErr};
 
 pub fn ns_init() -> Env {
     env_init!(None,
+        // That's it, you are all going to be simpler functions
         "test"          => Fun(|_| Ok(Str("This is a test function".to_string())), "Just a test function"),
         "exit"          => Fun(mal_exit, "Quits the program with specified status"),
         "+"             => Fun(|a| arithmetic_op(0, |a, b| a + b, a), "Returns the sum of the arguments"),
         "-"             => Fun(|a| arithmetic_op(0, |a, b| a - b, a), "Returns the difference of the arguments"),
         "*"             => Fun(|a| arithmetic_op(1, |a, b| a * b, a), "Returns the product of the arguments"),
-        "/"             => Fun(|a| arithmetic_op(1, |a, b| a / b, a), "Returns the division of the arguments"),
+        "/"             => Fun(|a| {any_zero(a)?; arithmetic_op(1, |a, b| a / b, a)}, "Returns the division of the arguments"),
         ">"             => Fun(|a| comparison_op(|a, b| a >  b, a), "Returns true if the arguments are in strictly descending order, 'nil' otherwise"),
         "<"             => Fun(|a| comparison_op(|a, b| a <  b, a), "Returns true if the arguments are in strictly ascending order, 'nil' otherwise"),
         ">="            => Fun(|a| comparison_op(|a, b| a >= b, a), "Returns true if the arguments are in descending order, 'nil' otherwise"),
@@ -57,13 +58,13 @@ pub fn ns_init() -> Env {
         "list?"         => Fun(|a| Ok(Bool(a.iter().all(|el| matches!(el, List(_))))), "Return true if the first argument is a list, false otherwise"),
         // "empty?"     => implemented through "count" in core.mal
         "count"         => Fun(|a| Ok(Int(car(a)?.if_list()?.len() as isize)), "Return the number of elements in the first argument"),
-        "and"           => Fun(|a| Ok(Bool(a.iter().all(|a| !matches!(a, Nil | Bool(false))))), "Returns false if at least one of the arguments is 'false' or 'nil', true otherwise"),
-        "or"            => Fun(|a| Ok(Bool(a.iter().any(|a| !matches!(a, Nil | Bool(false))))), "Returns false if all the arguments are 'false' or 'nil', true otherwise"),
-        "xor"           => Fun(|a| Ok(Bool(a.iter().filter(|a| !matches!(a, Nil | Bool(false))).count() == 1)), "Returns true if one of the arguments is different from 'nil' or 'false', false otherwise"),
-        // "not"        => implemented throught "if" in core.mal
+        // "and"        => implemented through "if" in core.mal
+        // "or"         => implemented through "if" in core.mal
+        // "xor"        => implemented through "if" in core.mal
+        // "not"        => implemented through "if" in core.mal
         "="             => Fun(mal_comp, "Return true if the first two parameters are the same type and content, in case of lists propagate to all elements"),
         "assert"        => Fun(mal_assert, "Return an error if assertion fails"),
-        "assert-eq"     => Fun(mal_assert_eq, "Return an error if arguments are not the same"),
+        // "assert-eq"  => implemented through "assert" in core.mal
         // Since the READ errors are Recoverable, when encountering one the reader continues appending to the previous status,
         // making unreasonable output, to solve this "upgrade" any kind of error in the inner "read_str" to an unrecoverable one, so the reader breaks the cycle
         "read-string"   => Fun(|a| read_str(Reader::new().push(car(a)?.if_string()?)).map_err(MalErr::severe), "Tokenize and read the first argument"),

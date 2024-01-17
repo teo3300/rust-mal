@@ -120,25 +120,6 @@ pub fn mal_assert(args: &[MalType]) -> MalRet {
     }
 }
 
-pub fn mal_assert_eq(args: &[MalType]) -> MalRet {
-    let (car, cdr) = car_cdr(args)?;
-    match mal_eq(car, cdr)? {
-        M::Nil | M::Bool(false) => {
-            let mut message = String::from("Assertion-eq failed: [");
-            message.push_str(
-                args.iter()
-                    .map(prt)
-                    .collect::<Vec<String>>()
-                    .join(" ")
-                    .as_str(),
-            );
-            message.push(']');
-            Err(MalErr::unrecoverable(message.as_str()))
-        }
-        _ => Ok(M::Nil),
-    }
-}
-
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub enum Severity {
     Recoverable,
