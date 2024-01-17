@@ -99,7 +99,13 @@ impl Reader {
                 if Regex::new(r"^-?[0-9]+$").unwrap().is_match(tk) {
                     Ok(Int(tk.parse::<isize>().unwrap()))
                 } else if tk.starts_with('\"') {
-                    Ok(Str(unescape_str(tk)))
+                    if tk.len() > 2 && tk.ends_with('\"') {
+                        Ok(Str(unescape_str(tk)))
+                    } else {
+                        Err(MalErr::recoverable(
+                            "End of line reached without closing string",
+                        ))
+                    }
                 } else if tk.starts_with(':') {
                     Ok(Key(format!("ʞ{}", tk)))
                 } else {

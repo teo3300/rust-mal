@@ -116,7 +116,6 @@ pub fn interactive(env: Env) {
                 }
                 Err(ReadlineError::Interrupted) => {
                     parser.clear();
-                    // eprintln!("; ... Interrupted");
                     continue;
                 }
                 Err(ReadlineError::Eof) => exit(0),
