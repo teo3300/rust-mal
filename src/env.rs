@@ -107,13 +107,10 @@ pub fn call_func(func: &MalType, args: &[MalType]) -> CallRet {
 }
 
 pub fn any_zero(list: &[MalType]) -> MalRet {
-    if list
-        .iter()
-        .any(|x| if let MalType::Int(0) = x { true } else { false })
-    {
+    if list.iter().any(|x| matches!(x, MalType::Int(0))) {
         return Err(MalErr::unrecoverable("Attempting division by 0"));
     }
-    return Ok(M::Nil);
+    Ok(M::Nil)
 }
 
 pub fn arithmetic_op(set: isize, f: fn(isize, isize) -> isize, args: &[MalType]) -> MalRet {
