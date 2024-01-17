@@ -1,9 +1,8 @@
-use crate::env::{env_get, Env};
+use crate::env::Env;
 use crate::eval::eval;
 use crate::reader::{read_str, Reader};
 use crate::step6_file::rep;
 use crate::types::{MalErr, MalRet};
-use std::env;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
@@ -14,29 +13,20 @@ fn eval_str(line: &str, env: &Env) -> MalRet {
 }
 
 pub fn set_home_path(env: &Env) {
-    let home = match env::var("MAL_HOME") {
-        Ok(s) => s,
-        Err(_) => env::var("HOME").unwrap() + "/.config/mal",
-    };
-
-    if !Path::new(&home).exists() {
-        eprintln!("; WARNING: MAL_HOME: \"{}\" does not exist", home);
-    }
-
-    // Add config path to mal
-    eval_str(format!("(def! MAL_HOME \"{home}\")").as_str(), env).unwrap();
+    eval_str(
+        "(or (def! MAL_HOME (env \"MAL_HOME\"))
+                (def! MAL_HOME (str (env \"HOME\") \"/.config/mal\")))",
+        env,
+    )
+    .unwrap();
 }
 
-fn get_home_path(env: &Env) -> String {
-    env_get(env, "MAL_HOME")
-        .unwrap()
-        .if_string()
-        .unwrap()
-        .to_string()
+fn get_home_path(env: &Env) -> Result<String, MalErr> {
+    Ok(eval_str("MAL_HOME", env)?.if_string()?.to_string())
 }
 
 pub fn load_home_file(filename: &str, env: &Env, warn: bool) {
-    let full_filename = get_home_path(env) + "/" + filename;
+    let full_filename = get_home_path(env).unwrap_or_else(|_| "".to_string()) + "/" + filename;
 
     if Path::new(&full_filename).exists() {
         if let Err(e) = load_file(&full_filename, env) {
@@ -77,12 +67,13 @@ use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
 
 pub fn interactive(env: Env) {
-    const HISTORY_PATH: &str = ".mal-history";
+    const HISTORY: &str = ".mal-history";
+    let home = get_home_path(&env).unwrap();
 
     // Using "Editor" instead of the standard I/O because I hate myself but not this much
     // TODO: remove unwrap and switch to a better error handling
     let mut rl = DefaultEditor::new().unwrap();
-    if rl.load_history(HISTORY_PATH).is_err() {
+    if rl.load_history(&(home + "/" + HISTORY)).is_err() {
         eprintln!("; Failed to load history");
     }
 
@@ -105,7 +96,7 @@ pub fn interactive(env: Env) {
                 Ok(line) => {
                     // TODO: should handle this in a different way
                     rl.add_history_entry(&line).unwrap();
-                    rl.save_history(HISTORY_PATH).unwrap();
+                    rl.save_history(HISTORY).unwrap();
 
                     parser.push(&line);
 

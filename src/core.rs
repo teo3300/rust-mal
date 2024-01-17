@@ -1,3 +1,5 @@
+use std::env;
+
 use crate::env::{arithmetic_op, car, comparison_op, env_new, env_set, mal_exit, Env};
 
 // This is the first time I implement a macro, and I'm copying it
@@ -65,6 +67,11 @@ pub fn ns_init() -> Env {
         // Since the READ errors are Recoverable, when encountering one the reader continues appending to the previous status,
         // making unreasonable output, to solve this "upgrade" any kind of error in the inner "read_str" to an unrecoverable one, so the reader breaks the cycle
         "read-string"   => Fun(|a| read_str(Reader::new().push(car(a)?.if_string()?)).map_err(MalErr::severe), "Tokenize and read the first argument"),
-        "slurp"         => Fun(|a| Ok(Str(read_file(car(a)?.if_string()?)?)), "Read a file and return the content as a string")
+        "slurp"         => Fun(|a| Ok(Str(read_file(car(a)?.if_string()?)?)), "Read a file and return the content as a string"),
+        // Retrieve environment variables, because why not
+        "env"           => Fun(|a| match env::var(car(a)?.if_string()?) {
+            Ok(s) => Ok(Str(s)),
+            _ => Ok(Nil),
+        }, "Retrieve environment variable")
     )
 }

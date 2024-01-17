@@ -72,6 +72,7 @@ impl MalType {
 
 use crate::types::MalType as M;
 
+// That's a quite chonky function
 fn mal_eq(a: &MalType, b: &[MalType]) -> MalRet {
     Ok(M::Bool(match a {
         M::Nil => b.iter().all(|el| matches!(el, M::Nil)),

@@ -1,4 +1,5 @@
 use std::cell::{Cell, RefCell};
+use std::rc::Rc;
 
 // Specyfy components in "types"
 use crate::types::*;
@@ -120,6 +121,14 @@ impl Reader {
             "(" => self.read_list(")"),
             "[" => self.read_list("]"),
             "{" => self.read_list("}"),
+            // Ugly quote transformation for quote expansion
+            "'" => {
+                self.next()?;
+                Ok(List(Rc::new(vec![
+                    MalType::Sym("quote".to_string()),
+                    self.read_form()?,
+                ])))
+            }
             _ => self.read_atom(),
         }
     }

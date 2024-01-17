@@ -149,6 +149,14 @@ pub fn eval(ast: &MalType, env: Env) -> MalRet {
                     M::Sym(sym) if sym == "fn*" => return fn_star_form(cdr, env.clone()),
                     M::Sym(sym) if sym == "help" => return help_form(cdr, env.clone()),
                     M::Sym(sym) if sym == "find" => return find_form(cdr, env.clone()),
+                    // Oh God, what have I done
+                    M::Sym(sym) if sym == "quote" => return Ok(car_cdr(cdr)?.0.clone()),
+                    M::Sym(sym) if sym == "ok?" => {
+                        return match eval(car_cdr(cdr)?.0, env.clone()) {
+                            Err(_) => Ok(M::Nil),
+                            _ => Ok(M::Bool(true)),
+                        }
+                    }
                     // Special form, sad
                     // Bruh, is basically double eval
                     M::Sym(sym) if sym == "eval" => {

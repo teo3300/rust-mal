@@ -18,12 +18,7 @@ mod functional {
 
     #[test]
     fn assert_fail() {
-        use crate::core::ns_init;
-        use crate::load_file;
-        assert!(matches!(
-            load_file("tests/assert_fail.mal", &ns_init()),
-            Err(_)
-        ))
+        test!("assert")
     }
 
     #[test]

@@ -30,12 +30,10 @@ fn PRINT(output: MalType) -> String {
 
 pub fn rep(reader: &Reader, env: &Env) -> Result<Vec<String>, MalErr> {
     let mut ret_str = Vec::new();
-    loop {
+    while !reader.ended() {
         let ast = READ(reader)?;
         let out = EVAL(ast, env.clone())?;
         ret_str.push(PRINT(out));
-        if reader.ended() {
-            break Ok(ret_str);
-        }
     }
+    Ok(ret_str)
 }
