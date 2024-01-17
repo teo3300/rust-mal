@@ -2,11 +2,10 @@ use crate::env::{env_get, Env};
 use crate::eval::eval;
 use crate::reader::{read_str, Reader};
 use crate::step6_file::rep;
-use crate::types::{MalErr, MalRet, MalType::Nil};
-use regex::Regex;
+use crate::types::{MalErr, MalRet};
 use std::env;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Read};
+use std::io::Read;
 use std::path::Path;
 use std::process::exit;
 
@@ -63,62 +62,15 @@ pub fn read_file(filename: &str) -> Result<String, MalErr> {
 }
 
 pub fn load_file(filename: &str, env: &Env) -> MalRet {
-    let file_desc = File::open(filename);
-    let file = match file_desc {
-        Ok(file) => file,
-        Err(_) => {
-            return Err(MalErr::unrecoverable(
-                format!("; WARNING: Unable to open file: {}", filename).as_str(),
-            ));
-        }
-    };
-    let reader = BufReader::new(file);
-    let mut last: Result<Vec<String>, MalErr> = Ok(Vec::new());
-
-    let comment_line = Regex::new(r"^[\s]*;.*").unwrap();
-
-    let parser = Reader::new();
-    for line in reader.lines() {
-        match line {
-            Ok(line) => {
-                // Read line to compose program inpu
-                if line.is_empty() || comment_line.is_match(&line) {
-                    last = Ok(Vec::new());
-                    continue;
-                } else {
-                    parser.push(&line);
-                }
-
-                last = match rep(&parser, env) {
-                    Err(error) if error.is_recoverable() => Err(error),
-                    tmp => {
-                        parser.clear();
-                        Ok(tmp.map_err(|error| {
-                            MalErr::unrecoverable(format!("; Error @ {}", error.message()).as_str())
-                        })?)
-                    }
-                }
-            }
-            Err(err) => {
-                return Err(MalErr::unrecoverable(
-                    format!("Error reading line: {}", err).as_str(),
-                ))
-            }
-        }
-    }
-    if let Err(error) = last {
-        Err(MalErr::unrecoverable(
-            format!(
-                "; ERROR parsing: '{}'\n;   {}\n;   the environment is in an unknown state",
-                filename,
-                error.message()
-            )
-            .as_str(),
-        ))
-    } else {
-        Ok(Nil)
-    }
-}
+    eval_str(
+        format!(
+            "(eval (read-string (str \"(do\n\" (slurp \"{}\") \"\nnil)\")))",
+            filename
+        )
+        .as_str(),
+        env,
+    )
+} // WTF this is becoming ever less like rust and more like lisp, did I really completely skip the file reading?
 
 extern crate rustyline;
 use rustyline::error::ReadlineError;
