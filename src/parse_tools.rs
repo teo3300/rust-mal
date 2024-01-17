@@ -1,4 +1,4 @@
-use crate::env::Env;
+use crate::env::{env_get, Env};
 use crate::eval::eval;
 use crate::reader::{read_str, Reader};
 use crate::step6_file::rep;
@@ -10,33 +10,33 @@ use std::io::{BufRead, BufReader, Read};
 use std::path::Path;
 use std::process::exit;
 
-pub fn load_core(env: &Env) {
-    eval_str("(def! not (fn* [x] (if x nil true)))", env).unwrap();
-    eval_str(
-        "(def! load-file (fn* [f] (eval (read-string (str \"(do \" (slurp f) \"\nnil)\")))))",
-        env,
-    )
-    .unwrap();
-    eval_str(
-        "(def! conf-reload (fn* [] (load-file (str MAL_HOME \"/\" \"config.mal\"))))",
-        env,
-    )
-    .unwrap();
-}
-
 fn eval_str(line: &str, env: &Env) -> MalRet {
     eval(&read_str(Reader::new().push(line))?, env.clone())
 }
 
-pub fn load_conf(work_env: &Env) {
-    const CONFIG: &str = "config.mal";
+pub fn set_home_path(env: &Env) {
     let home = match env::var("MAL_HOME") {
         Ok(s) => s,
         Err(_) => env::var("HOME").unwrap() + "/.config/mal",
     };
+
     // Add config path to mal
-    eval_str(format!("(def! MAL_HOME \"{home}\")").as_str(), work_env).unwrap();
-    let config = home + "/" + CONFIG;
+    eval_str(format!("(def! MAL_HOME \"{home}\")").as_str(), env).unwrap();
+}
+
+fn get_home_path(env: &Env) -> Result<String, MalErr> {
+    Ok(env_get(env, "MAL_HOME")?.if_string()?.to_string())
+}
+
+pub fn load_core(env: &Env) {
+    let mut home_path = get_home_path(env).unwrap();
+    home_path.push_str("/core.mal");
+    load_file(&home_path, env).unwrap();
+}
+
+pub fn load_conf(work_env: &Env) {
+    const CONFIG: &str = "config.mal";
+    let config = get_home_path(work_env).unwrap() + "/" + CONFIG;
 
     if Path::new(&config).exists() {
         if let Err(e) = load_file(&config, work_env) {
@@ -127,7 +127,7 @@ pub fn interactive(env: Env) {
     // TODO: remove unwrap and switch to a better error handling
     let mut rl = DefaultEditor::new().unwrap();
     if rl.load_history(HISTORY_PATH).is_err() {
-        eprintln!("Failed to load history");
+        eprintln!("; Failed to load history");
     }
 
     let mut num = 0;
@@ -169,12 +169,12 @@ pub fn interactive(env: Env) {
                 }
                 Err(ReadlineError::Interrupted) => {
                     parser.clear();
-                    eprintln!("; ... Interrupted");
+                    // eprintln!("; ... Interrupted");
                     continue;
                 }
                 Err(ReadlineError::Eof) => exit(0),
                 Err(err) => {
-                    eprint!("Error reading lnie: {:?}", err);
+                    eprint!("; Error reading lnie: {:?}", err);
                     break;
                 }
             }

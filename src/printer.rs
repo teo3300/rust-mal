@@ -66,5 +66,6 @@ pub fn print_malfun(sym: &str, params: Rc<MalType>, ast: Rc<MalType>) {
         .if_list()
         .unwrap_or(&[])
         .iter()
-        .for_each(|el| println!(";   {}\n", pr_str(el, true)));
+        .for_each(|el| println!(";   {}", pr_str(el, true)));
+    println!();
 }

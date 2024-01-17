@@ -53,13 +53,12 @@ pub fn ns_init() -> Env {
         "println"       => Fun(|a| {a.iter().for_each(|a| print!("{} ", pr_str(a, false))); println!(); Ok(Nil) }, "Print readably all the arguments"),
         "list"          => Fun(|a| Ok(List(MalArgs::new(a.to_vec()))), "Return the arguments as a list"),
         "list?"         => Fun(|a| Ok(Bool(a.iter().all(|el| matches!(el, List(_))))), "Return true if the first argument is a list, false otherwise"),
-        "empty?"        => Fun(|a| Ok(Bool(car(a)?.if_list()?.is_empty())), "Return true if the first parameter is an empty list, false otherwise, returns an error if the element is not a list"),
+        // "empty?"     => implemented through "count" in core.mal
         "count"         => Fun(|a| Ok(Int(car(a)?.if_list()?.len() as isize)), "Return the number of elements in the first argument"),
         "and"           => Fun(|a| Ok(Bool(a.iter().all(|a| !matches!(a, Nil | Bool(false))))), "Returns false if at least one of the arguments is 'false' or 'nil', true otherwise"),
         "or"            => Fun(|a| Ok(Bool(a.iter().any(|a| !matches!(a, Nil | Bool(false))))), "Returns false if all the arguments are 'false' or 'nil', true otherwise"),
         "xor"           => Fun(|a| Ok(Bool(a.iter().filter(|a| !matches!(a, Nil | Bool(false))).count() == 1)), "Returns true if one of the arguments is different from 'nil' or 'false', false otherwise"),
-        // "not" defined inside mal itself
-        // "not"        => Fun(|a| Ok(Bool(matches!(car(a)?, Nil | Bool(false)))), "Negate the first argument"),
+        // "not"        => implemented throught "if" in core.mal
         "="             => Fun(mal_comp, "Return true if the first two parameters are the same type and content, in case of lists propagate to all elements"),
         "assert"        => Fun(mal_assert, "Return an error if assertion fails"),
         "assert-eq"     => Fun(mal_assert_eq, "Return an error if arguments are not the same"),

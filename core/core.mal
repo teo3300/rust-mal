@@ -1,0 +1,17 @@
+;; Previously in core.rs
+(def! not (fn* [x]
+    (if x nil true)))
+
+(def! empty? (fn* [l]
+    (= (count l) 0)))
+
+;; File-interaction functions
+(def! load-file (fn* [f]
+    (eval (read-string (str "(do " (slurp f) "\nnil)")))))
+
+(def! conf-reload (fn* []
+    (load-file (str MAL_HOME "/" "config.mal"))))
+
+;; Shorthand
+(def! quit (fn* []
+    (exit 0)))

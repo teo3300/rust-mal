@@ -12,12 +12,15 @@ mod step6_file;
 mod types;
 
 use core::ns_init;
-use parse_tools::{interactive, load_conf, load_core, load_file};
+use parse_tools::{interactive, load_conf, load_core, load_file, set_home_path};
 
 fn main() {
     // Initialize ns environment
     let reply_env = ns_init();
 
+    // Set the "MAL_HOME" symbol to the specified directory or the default one
+    set_home_path(&reply_env);
+    // load "$MAL_HOME/core.mal"
     load_core(&reply_env);
 
     // Load config files ($MAL_HOME/config.mal, or default $HOME/.config/mal/config.mal)
