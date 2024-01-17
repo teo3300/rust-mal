@@ -99,7 +99,7 @@ impl Reader {
                 if Regex::new(r"^-?[0-9]+$").unwrap().is_match(tk) {
                     return Ok(Int(tk.parse::<isize>().unwrap()));
                 } else if tk.starts_with('\"') {
-                    if tk.len() > 2 && tk.ends_with('\"') {
+                    if tk.len() > 1 && tk.ends_with('\"') {
                         return Ok(Str(unescape_str(tk)));
                     }
                     return Err(MalErr::unrecoverable(

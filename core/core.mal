@@ -26,7 +26,7 @@
 
 ;; File-interaction functions
 (def! load-file (fn* [f]
-    (eval (read-string (str "(do\n" (slurp f) "\nnil)")))))
+    (eval (read-string (str "(do " (slurp f) "\nnil)")))))
 
 (def! conf-reload (fn* []
     (load-file (str MAL_HOME "/" "config.mal"))))
