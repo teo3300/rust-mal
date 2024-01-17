@@ -72,6 +72,6 @@ pub fn ns_init() -> Env {
         "env"           => Fun(|a| match env::var(car(a)?.if_string()?) {
             Ok(s) => Ok(Str(s)),
             _ => Ok(Nil),
-        }, "Retrieve environment variable")
+        }, "Retrieve the specified environment variable, returns NIL if that variable does not exist")
     )
 }

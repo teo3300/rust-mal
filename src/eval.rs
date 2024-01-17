@@ -1,4 +1,4 @@
-use crate::env::{self, call_func, car_cdr, CallFunc, CallRet};
+use crate::env::{self, call_func, car, car_cdr, CallFunc, CallRet};
 use crate::env::{env_get, env_new, env_set};
 use crate::env::{first_last, Env};
 use crate::printer::prt;
@@ -139,20 +139,20 @@ pub fn eval(ast: &MalType, env: Env) -> MalRet {
     loop {
         match &ast {
             M::List(list) if list.is_empty() => return Ok(ast.clone()),
-            M::List(list) if !list.is_empty() => {
-                let (car, cdr) = car_cdr(list)?;
-                match car {
-                    M::Sym(sym) if sym == "def!" => return def_bang_form(cdr, env.clone()), // Set for env
-                    M::Sym(sym) if sym == "let*" => (ast, env) = let_star_form(cdr, env.clone())?,
-                    M::Sym(sym) if sym == "do" => ast = do_form(cdr, env.clone())?,
-                    M::Sym(sym) if sym == "if" => ast = if_form(cdr, env.clone())?,
-                    M::Sym(sym) if sym == "fn*" => return fn_star_form(cdr, env.clone()),
-                    M::Sym(sym) if sym == "help" => return help_form(cdr, env.clone()),
-                    M::Sym(sym) if sym == "find" => return find_form(cdr, env.clone()),
+            M::List(list) => {
+                let (symbol, args) = car_cdr(list)?;
+                match symbol {
+                    M::Sym(sym) if sym == "def!" => return def_bang_form(args, env.clone()), // Set for env
+                    M::Sym(sym) if sym == "let*" => (ast, env) = let_star_form(args, env.clone())?,
+                    M::Sym(sym) if sym == "do" => ast = do_form(args, env.clone())?,
+                    M::Sym(sym) if sym == "if" => ast = if_form(args, env.clone())?,
+                    M::Sym(sym) if sym == "fn*" => return fn_star_form(args, env.clone()),
+                    M::Sym(sym) if sym == "help" => return help_form(args, env.clone()),
+                    M::Sym(sym) if sym == "find" => return find_form(args, env.clone()),
                     // Oh God, what have I done
-                    M::Sym(sym) if sym == "quote" => return Ok(car_cdr(cdr)?.0.clone()),
+                    M::Sym(sym) if sym == "quote" => return Ok(car(args)?.clone()),
                     M::Sym(sym) if sym == "ok?" => {
-                        return match eval(car_cdr(cdr)?.0, env.clone()) {
+                        return match eval(car(args)?, env.clone()) {
                             Err(_) => Ok(M::Nil),
                             _ => Ok(M::Bool(true)),
                         }
@@ -160,7 +160,7 @@ pub fn eval(ast: &MalType, env: Env) -> MalRet {
                     // Special form, sad
                     // Bruh, is basically double eval
                     M::Sym(sym) if sym == "eval" => {
-                        ast = eval(env::car(cdr)?, env.clone())?;
+                        ast = eval(env::car(args)?, env.clone())?;
                         // Climb to the outermost environment (The repl env)
                         env = outermost(&env);
                     }

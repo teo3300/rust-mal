@@ -54,7 +54,7 @@ pub fn read_file(filename: &str) -> Result<String, MalErr> {
 pub fn load_file(filename: &str, env: &Env) -> MalRet {
     eval_str(
         format!(
-            "(eval (read-string (str \"(do\n\" (slurp \"{}\") \"\nnil)\")))",
+            "(eval (read-string (str \"(do \" (slurp \"{}\") \"\nnil)\")))",
             filename
         )
         .as_str(),
