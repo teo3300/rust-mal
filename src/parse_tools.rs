@@ -20,28 +20,32 @@ pub fn set_home_path(env: &Env) {
         Err(_) => env::var("HOME").unwrap() + "/.config/mal",
     };
 
+    if !Path::new(&home).exists() {
+        eprintln!("; WARNING: MAL_HOME: \"{}\" does not exist", home);
+    }
+
     // Add config path to mal
     eval_str(format!("(def! MAL_HOME \"{home}\")").as_str(), env).unwrap();
 }
 
-fn get_home_path(env: &Env) -> Result<String, MalErr> {
-    Ok(env_get(env, "MAL_HOME")?.if_string()?.to_string())
+fn get_home_path(env: &Env) -> String {
+    env_get(env, "MAL_HOME")
+        .unwrap()
+        .if_string()
+        .unwrap()
+        .to_string()
 }
 
-pub fn load_core(env: &Env) {
-    let mut home_path = get_home_path(env).unwrap();
-    home_path.push_str("/core.mal");
-    load_file(&home_path, env).unwrap();
-}
+pub fn load_home_file(filename: &str, env: &Env, warn: bool) {
+    let full_filename = get_home_path(env) + "/" + filename;
 
-pub fn load_conf(work_env: &Env) {
-    const CONFIG: &str = "config.mal";
-    let config = get_home_path(work_env).unwrap() + "/" + CONFIG;
-
-    if Path::new(&config).exists() {
-        if let Err(e) = load_file(&config, work_env) {
-            eprintln!("{}", e.message())
+    if Path::new(&full_filename).exists() {
+        if let Err(e) = load_file(&full_filename, env) {
+            eprintln!("; reading \"{}\":", full_filename);
+            eprintln!("{}", e.message());
         }
+    } else if warn {
+        eprintln!("; WARNING: file \"{}\" does not exist", full_filename);
     }
 }
 

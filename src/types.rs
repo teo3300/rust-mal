@@ -167,6 +167,11 @@ impl MalErr {
         self.severity == Severity::Recoverable
     }
 
+    pub fn severe(mut self) -> Self {
+        self.severity = Severity::Unrecoverable;
+        self
+    }
+
     pub fn recoverable(message: &str) -> Self {
         Self::new(message.to_owned(), Severity::Recoverable)
     }

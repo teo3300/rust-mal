@@ -33,7 +33,7 @@ use crate::parse_tools::read_file;
 use crate::printer::pr_str;
 use crate::reader::{read_str, Reader};
 use crate::types::MalType::{Bool, Fun, Int, List, Nil, Str};
-use crate::types::{mal_assert, mal_assert_eq, mal_comp, MalArgs};
+use crate::types::{mal_assert, mal_assert_eq, mal_comp, MalArgs, MalErr};
 
 pub fn ns_init() -> Env {
     env_init!(None,
@@ -62,7 +62,9 @@ pub fn ns_init() -> Env {
         "="             => Fun(mal_comp, "Return true if the first two parameters are the same type and content, in case of lists propagate to all elements"),
         "assert"        => Fun(mal_assert, "Return an error if assertion fails"),
         "assert-eq"     => Fun(mal_assert_eq, "Return an error if arguments are not the same"),
-        "read-string"   => Fun(|a| read_str(Reader::new().push(car(a)?.if_string()?)), "Tokenize and read the first argument"),
+        // Since the READ errors are Recoverable, when encountering one the reader continues appending to the previous status,
+        // making unreasonable output, to solve this "upgrade" any kind of error in the inner "read_str" to an unrecoverable one, so the reader breaks the cycle
+        "read-string"   => Fun(|a| read_str(Reader::new().push(car(a)?.if_string()?)).map_err(MalErr::severe), "Tokenize and read the first argument"),
         "slurp"         => Fun(|a| Ok(Str(read_file(car(a)?.if_string()?)?)), "Read a file and return the content as a string")
     )
 }
