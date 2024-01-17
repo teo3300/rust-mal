@@ -40,7 +40,6 @@ use crate::types::{mal_assert, mal_comp, MalArgs, MalErr};
 pub fn ns_init() -> Env {
     env_init!(None,
         // That's it, you are all going to be simpler functions
-        "test"          => Fun(|_| Ok(Str("This is a test function".to_string())), "Just a test function"),
         "exit"          => Fun(mal_exit, "Quits the program with specified status"),
         "+"             => Fun(|a| arithmetic_op(0, |a, b| a + b, a), "Returns the sum of the arguments"),
         "-"             => Fun(|a| arithmetic_op(0, |a, b| a - b, a), "Returns the difference of the arguments"),
@@ -56,20 +55,11 @@ pub fn ns_init() -> Env {
         "println"       => Fun(|a| {a.iter().for_each(|a| print!("{} ", pr_str(a, false))); println!(); Ok(Nil) }, "Print readably all the arguments"),
         "list"          => Fun(|a| Ok(List(MalArgs::new(a.to_vec()))), "Return the arguments as a list"),
         "list?"         => Fun(|a| Ok(Bool(a.iter().all(|el| matches!(el, List(_))))), "Return true if the first argument is a list, false otherwise"),
-        // "empty?"     => implemented through "count" in core.mal
         "count"         => Fun(|a| Ok(Int(car(a)?.if_list()?.len() as isize)), "Return the number of elements in the first argument"),
-        // "and"        => implemented through "if" in core.mal
-        // "or"         => implemented through "if" in core.mal
-        // "xor"        => implemented through "if" in core.mal
-        // "not"        => implemented through "if" in core.mal
         "="             => Fun(mal_comp, "Return true if the first two parameters are the same type and content, in case of lists propagate to all elements"),
         "assert"        => Fun(mal_assert, "Return an error if assertion fails"),
-        // "assert-eq"  => implemented through "assert" in core.mal
-        // Since the READ errors are Recoverable, when encountering one the reader continues appending to the previous status,
-        // making unreasonable output, to solve this "upgrade" any kind of error in the inner "read_str" to an unrecoverable one, so the reader breaks the cycle
         "read-string"   => Fun(|a| read_str(Reader::new().push(car(a)?.if_string()?)).map_err(MalErr::severe), "Tokenize and read the first argument"),
         "slurp"         => Fun(|a| Ok(Str(read_file(car(a)?.if_string()?)?)), "Read a file and return the content as a string"),
-        // Retrieve environment variables, because why not
         "env"           => Fun(|a| match env::var(car(a)?.if_string()?) {
             Ok(s) => Ok(Str(s)),
             _ => Ok(Nil),
