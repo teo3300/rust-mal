@@ -97,8 +97,9 @@ pub fn interactive(env: Env) {
             match line {
                 Ok(line) => {
                     // TODO: should handle this in a different way
-                    rl.add_history_entry(&line).unwrap();
-                    rl.save_history(&history).unwrap();
+                    rl.add_history_entry(&line).unwrap_or_default();
+                    rl.save_history(&history)
+                        .unwrap_or_else(|e| eprintln!("; WARNING: saving history: {}", e));
 
                     parser.push(&line);
 
