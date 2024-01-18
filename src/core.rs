@@ -41,10 +41,9 @@ pub fn ns_init() -> Env {
     env_init!(None,
         // That's it, you are all going to be simpler functions
         "exit"          => Fun(mal_exit, "Quits the program with specified status"),
+        "raise"         => Fun(|a| Err(MalErr::unrecoverable(car(a)?.if_string()?)), "Raise an unrecoverable error with the specified message"),
         "-"             => Fun(|a| num_op(|a, b|  Int(a -  b), a), "Returns the difference of the arguments"),
         "*"             => Fun(|a| num_op(|a, b|  Int(a *  b), a), "Returns the product of the arguments"),
-        "/"             => Fun(|a| num_op(|a, b|  Int(a /  b), a), "Returns the division of the arguments"),
-        ">"             => Fun(|a| num_op(|a, b| Bool(a >  b), a), "Returns true if the first argument is strictly greater than the second one, nil otherwise"),
         "<"             => Fun(|a| num_op(|a, b| Bool(a <  b), a), "Returns true if the first argument is strictly smallerthan the second one, nil otherwise"),
         "pr-str"        => Fun(|a| Ok(Str(a.iter().map(|i| pr_str(i, true)).collect::<Vec<String>>().join(" "))), "Print readably all arguments"),
         "str"           => Fun(|a| Ok(Str(a.iter().map(|i| pr_str(i, false)).collect::<Vec<String>>().join(""))), "Print non readably all arguments"),
