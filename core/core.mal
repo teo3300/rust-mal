@@ -5,17 +5,30 @@
 
 (def! and (fn* [a b]
     (if a
-        b)))
+        (if b true))))
 
 (def! or (fn* [a b]
     (if a
         true
-        b)))
+        (if b true))))
 
 (def! xor (fn* [a b]
     (if a
         (not b)
-        b)))
+        (if b true))))
+
+; Arithmetic
+(def! + (fn* [a b]
+    (- a (- 0 b))))
+
+(def! mod (fn* [a b]
+    (- a (* (/ a b) b))))
+
+(def! >= (fn* [a b]
+    (not (< a b))))
+
+(def! <= (fn* [a b]
+    (not (> a b))))
 
 ; Other functions in core.rs
 (def! assert-eq (fn* [a b]

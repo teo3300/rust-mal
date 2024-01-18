@@ -106,45 +106,21 @@ pub fn call_func(func: &MalType, args: &[MalType]) -> CallRet {
     }
 }
 
-pub fn any_zero(list: &[MalType]) -> MalRet {
-    if list.iter().any(|x| matches!(x, MalType::Int(0))) {
-        return Err(MalErr::unrecoverable("Attempting division by 0"));
+pub fn bin_unpack(list: &[MalType]) -> Result<(&MalType, &MalType), MalErr> {
+    if list.len() != 2 {
+        return Err(MalErr::unrecoverable("Two arguments required"));
     }
-    Ok(M::Nil)
+    Ok((&list[0], &list[1]))
 }
 
-pub fn arithmetic_op(set: isize, f: fn(isize, isize) -> isize, args: &[MalType]) -> MalRet {
-    Ok(M::Int(match args.len() {
-        0 => set,
-        1 => f(set, args[0].if_number()?),
-        _ => {
-            // TODO: Maybe an accumulator
-            let mut left = args[0].if_number()?;
-            for el in &args[1..] {
-                left = f(left, el.if_number()?);
-            }
-            left
-        }
-    }))
+pub fn num_op(f: fn(isize, isize) -> MalType, args: &[MalType]) -> MalRet {
+    let (car, cdr) = bin_unpack(args)?;
+    let car = car.if_number()?;
+    let cdr = cdr.if_number()?;
+    Ok(f(car, cdr))
 }
 
-use MalType::{Bool, Nil};
-
-pub fn comparison_op(f: fn(isize, isize) -> bool, args: &[MalType]) -> MalRet {
-    if args.is_empty() {
-        return Ok(Nil);
-    }
-    let (left, rights) = car_cdr(args)?;
-    let mut left = left.if_number()?;
-    for right in rights {
-        let right = right.if_number()?;
-        if !f(left, right) {
-            return Ok(Nil);
-        }
-        left = right;
-    }
-    Ok(Bool(true))
-}
+use MalType::Nil;
 
 pub fn car(list: &[MalType]) -> Result<&MalType, MalErr> {
     match list.len() {
@@ -189,7 +165,7 @@ pub fn first_last(list: &[MalType]) -> (&[MalType], Result<&MalType, MalErr>) {
 use std::process::exit;
 
 pub fn mal_exit(list: &[MalType]) -> MalRet {
-    match car_cdr(list)?.0 {
+    match car(list)? {
         MalType::Int(val) => exit(*val as i32),
         _ => exit(-1),
     }
