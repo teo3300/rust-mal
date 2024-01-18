@@ -1,15 +1,15 @@
-use crate::env::{car_cdr, Env};
+use crate::env::{bin_unpack, Env};
 use std::{collections::HashMap, rc::Rc};
 
 // All Mal types should inherit from this
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum MalType {
     List(MalArgs),
     Vector(MalArgs),
     Map(MalMap),
     Fun(fn(&[MalType]) -> MalRet, &'static str), // Used for base functions, implemented using the underlying language (rust)
     MalFun {
-        eval: fn(ast: &MalType, env: Env) -> MalRet,
+        // eval: fn(ast: &MalType, env: Env) -> MalRet,
         params: Rc<MalType>,
         ast: Rc<MalType>,
         env: Env,
@@ -42,6 +42,15 @@ impl MalType {
         }
     }
 
+    pub fn if_vec(&self) -> Result<&[MalType], MalErr> {
+        match self {
+            Self::Vector(list) => Ok(list),
+            _ => Err(MalErr::unrecoverable(
+                format!("{:?} is not a vector", prt(self)).as_str(),
+            )),
+        }
+    }
+
     pub fn if_symbol(&self) -> Result<&str, MalErr> {
         match self {
             Self::Sym(sym) => Ok(sym),
@@ -50,63 +59,54 @@ impl MalType {
             )),
         }
     }
+
+    pub fn if_string(&self) -> Result<&str, MalErr> {
+        match self {
+            Self::Str(sym) => Ok(sym),
+            _ => Err(MalErr::unrecoverable(
+                format!("{:?} is not a string", prt(self)).as_str(),
+            )),
+        }
+    }
 }
 
 use crate::types::MalType as M;
 
-fn mal_eq(a: &MalType, b: &[MalType]) -> MalRet {
-    Ok(M::Bool(match a {
-        M::Nil => b.iter().all(|el| matches!(el, M::Nil)),
-        M::Bool(a) => b.iter().all(|el| matches!(el, M::Bool(b) if a == b)),
-        M::Int(a) => b.iter().all(|el| matches!(el, M::Int(b)  if a == b)),
-        M::Key(a) => b.iter().all(|el| matches!(el, M::Key(b)  if a == b)),
-        M::Str(a) => b.iter().all(|el| matches!(el, M::Str(b)  if a == b)),
-        M::List(a) => b.iter().all(|el| {
-            matches!(el, M::List(b)
-                if a.len() == b.len()
-                && a.iter().zip(b.iter()).all(
-                    |(a, b)| matches!(mal_eq(a, &[b.clone()]),
-                        Ok(M::Bool(true)))))
-        }),
-        M::Vector(a) => b.iter().all(|el| {
-            matches!(el, M::Vector(b)
-                if a.len() == b.len()
-                && a.iter().zip(b.iter()).all(
-                    |(a, b)| matches!(mal_eq(a, &[b.clone()]),
-                        Ok(M::Bool(true)))))
-        }),
-        _ => {
-            return Err(MalErr::unrecoverable(
-                "Comparison not implemented for 'Map', 'Fun', 'MalFun' and 'Sym'",
-            ))
+// That's a quite chonky function
+fn mal_eq(args: (&MalType, &MalType)) -> bool {
+    match (args.0, args.1) {
+        (M::Nil, M::Nil) => true,
+        (M::Bool(a), M::Bool(b)) => a == b,
+        (M::Int(a), M::Int(b)) => a == b,
+        (M::Key(a), M::Key(b)) | (M::Str(a), M::Str(b)) | (M::Sym(a), M::Sym(b)) => a == b,
+        (M::List(a), M::List(b)) | (M::Vector(a), M::Vector(b)) => {
+            a.len() == b.len() && a.iter().zip(b.iter()).all(mal_eq)
         }
-    }))
+        _ => false,
+    }
 }
 
 pub fn mal_comp(args: &[MalType]) -> MalRet {
-    match args.len() {
-        0 => Ok(M::Bool(true)),
-        _ => {
-            let (car, cdr) = car_cdr(args)?;
-            mal_eq(car, cdr)
-        }
+    if args.len() != 2 {
+        return Err(MalErr::unrecoverable("Expected 2 arguments"));
     }
+    Ok(M::Bool(mal_eq(bin_unpack(args)?)))
 }
 
 pub fn mal_assert(args: &[MalType]) -> MalRet {
     if args.iter().any(|i| matches!(i, M::Nil | M::Bool(false))) {
-        Err(MalErr::unrecoverable("Assertion failed"))
-    } else {
-        Ok(M::Nil)
+        return Err(MalErr::unrecoverable("Assertion failed"));
     }
+    Ok(M::Nil)
 }
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum Severity {
     Recoverable,
     Unrecoverable,
 }
 
+#[derive(Debug)]
 pub struct MalErr {
     message: String,
     severity: Severity,
@@ -127,6 +127,11 @@ impl MalErr {
 
     pub fn is_recoverable(&self) -> bool {
         self.severity == Severity::Recoverable
+    }
+
+    pub fn severe(mut self) -> Self {
+        self.severity = Severity::Unrecoverable;
+        self
     }
 
     pub fn recoverable(message: &str) -> Self {

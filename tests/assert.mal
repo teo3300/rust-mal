@@ -1,0 +1,6 @@
+(assert true)
+(assert (ok? 1))
+(assert-eq nil (ok? (1)))
+(assert-eq true (ok? 1))
+(ok? (assert true))
+(not (ok? (assert nil)))

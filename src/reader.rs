@@ -1,4 +1,5 @@
 use std::cell::{Cell, RefCell};
+use std::rc::Rc;
 
 // Specyfy components in "types"
 use crate::types::*;
@@ -25,10 +26,11 @@ impl Reader {
         }
     }
 
-    pub fn push(&self, input: &str) {
+    pub fn push(&self, input: &str) -> &Self {
         self.ptr.set(0);
         // reset the state of the parser and push the additional strings
         self.tokens.borrow_mut().append(&mut tokenize(input));
+        self
     }
 
     pub fn clear(&self) {
@@ -95,14 +97,18 @@ impl Reader {
             "nil" => Ok(Nil),
             tk => {
                 if Regex::new(r"^-?[0-9]+$").unwrap().is_match(tk) {
-                    Ok(Int(tk.parse::<isize>().unwrap()))
+                    return Ok(Int(tk.parse::<isize>().unwrap()));
                 } else if tk.starts_with('\"') {
-                    Ok(Str(unescape_str(tk)))
+                    if tk.len() > 1 && tk.ends_with('\"') {
+                        return Ok(Str(unescape_str(tk)));
+                    }
+                    return Err(MalErr::unrecoverable(
+                        "End of line reached without closing string",
+                    ));
                 } else if tk.starts_with(':') {
-                    Ok(Key(format!("ʞ{}", tk)))
-                } else {
-                    Ok(Sym(tk.to_string()))
+                    return Ok(Key(format!("ʞ{}", tk)));
                 }
+                Ok(Sym(tk.to_string()))
             }
         }
     }
@@ -119,6 +125,14 @@ impl Reader {
             "(" => self.read_list(")"),
             "[" => self.read_list("]"),
             "{" => self.read_list("}"),
+            // Ugly quote transformation for quote expansion
+            "'" => {
+                self.next()?;
+                Ok(List(Rc::new(vec![
+                    MalType::Sym("quote".to_string()),
+                    self.read_form()?,
+                ])))
+            }
             _ => self.read_atom(),
         }
     }
@@ -128,7 +142,11 @@ impl Reader {
 /// Create anew Reader with the tokens
 /// Call read_from with the reader instance
 pub fn read_str(reader: &Reader) -> MalRet {
-    reader.read_form()
+    let mut ret = Nil;
+    while !reader.ended() {
+        ret = reader.read_form()?;
+    }
+    Ok(ret)
 }
 
 /// Read a string and return a list of tokens in it (following regex in README)

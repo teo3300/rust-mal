@@ -5,3 +5,6 @@ src/#*
 
 # emacs save
 src/*~
+
+# history file
+.mal-history

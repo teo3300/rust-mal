@@ -1,0 +1,83 @@
+;; Previously in core.rs
+; Logic
+(def! not (fn* [x]
+    (if x nil true)))
+
+(def! and (fn* [a b]
+    (if a
+        (if b true))))
+
+(def! or (fn* [a b]
+    (if a
+        true
+        (if b true))))
+
+(def! xor (fn* [a b]
+    (if a
+        (not b)
+        (if b true))))
+
+; Arithmetic
+(def! > (fn* [a b]
+    (< b a)))
+
+(def! >= (fn* [a b]
+    (not (< a b))))
+
+(def! <= (fn* [a b]
+    (>= b a)))
+
+(def! + (fn* [a b]
+    (- a (- 0 b))))
+
+(def! abs (fn* [a]
+    (if (> a 0)
+        a
+        (- 0 a))))
+
+(def! sign-product (fn* [op a b acc]
+    (let* [res (op (abs a) (abs b) acc)]
+        (if (xor (< 0 a) (< 0 b))
+            (- 0 res)
+            res))))
+
+(def! * (fn* [a b]
+    "Recursive product based on sum"
+    (sign-product *-rec a b 0)))
+
+(def! *-rec (fn* [a b acc]
+    (if (= b 0)
+        acc
+        (*-rec a (- b 1) (+ acc a)))))
+
+(def! / (fn* [a b]
+    "recursive division based on subtraction"
+    (if (= b 0)
+        (raise "Attempting division by 0")
+        (sign-product /-rec a b 0))))
+
+(def! /-rec (fn* [a b acc]
+    (if (>= (- a b) 0)
+        (/-rec (- a b) b (+ acc 1))
+        acc)))
+
+(def! mod (fn* [a b]
+    (- a (* (/ a b) b))))
+
+; Other functions in core.rs
+(def! assert-eq (fn* [a b]
+    (assert (= a b))))
+
+(def! empty? (fn* [l]
+    (= (count l) 0)))
+
+;; File-interaction functions
+(def! load-file (fn* [f]
+    (eval (read-string (str "(do " (slurp f) "\nnil)")))))
+
+(def! conf-reload (fn* []
+    (load-file (str MAL_HOME "/" "config.mal"))))
+
+;; Shorthand
+(def! quit (fn* []
+    (exit 0)))

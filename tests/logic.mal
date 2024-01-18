@@ -9,23 +9,19 @@
 (assert (not (not true)))
 
 ; or
-(assert (not (or false)))
-(assert (or 1))
-(assert (or 1 nil false))
-(assert (or 1 1 1))
-(assert (or nil 1 false))
-(assert (not (or nil false)))
-(assert (not (or false nil)))
+(assert (not (or nil nil)))
+(assert (or 1 nil))
+(assert (or nil 1))
+(assert (or 1 1))
 
 ; and
-(assert (and 1))
-(assert (not (and nil)))
-(assert (and 1 1 1))
-(assert (not (and 1 nil false)))
-(assert (not (and nil false)))
+(assert (not (and nil nil)))
+(assert (not (and 1 nil)))
+(assert (not (and 1 nil)))
+(assert (and 1 1))
 
 ; xor
-(assert (not (xor nil false nil)))
-(assert (xor nil 1 nil false nil))
-(assert (not (xor nil 1 false 1)))
-(assert (not (xor 1 nil 1 1)))
+(assert (not (xor nil nil)))
+(assert (xor nil 1))
+(assert (xor 1 nil))
+(assert (not (xor 1 1)))

@@ -13,7 +13,7 @@ fn key_str(val: &str) -> MalType {
 
 pub fn pr_str(ast: &MalType, print_readably: bool) -> String {
     match ast {
-        M::Nil => "nil".to_string(),
+        M::Nil => "NIL".to_string(),
         M::Sym(sym) => sym.to_string(),
         M::Key(sym) => sym[2..].to_string(),
         M::Int(val) => val.to_string(),
@@ -67,4 +67,5 @@ pub fn print_malfun(sym: &str, params: Rc<MalType>, ast: Rc<MalType>) {
         .unwrap_or(&[])
         .iter()
         .for_each(|el| println!(";   {}", pr_str(el, true)));
+    println!();
 }

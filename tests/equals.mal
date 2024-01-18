@@ -6,53 +6,48 @@
 ;   1 different
 ;   compare with foreign type
 
-; empty
-(assert (=))                    ; nothing to compare with
-
 ; nil
-(assert (= nil))
-(assert (= nil nil nil))
+(assert (= nil nil))
 (assert (not (= nil true)))
 (assert (not (= nil 1)))
 
 ; bool
-(assert (= true))
-(assert (= true true true))
-(assert (not (= true false true)))
+(assert (= true true))
+(assert (not (= false true)))
 (assert (not (= true 1)))
 
 ; int
-(assert (= 1))
-(assert (= 1 1 1))
-(assert (not (= 1 2 1)))
+(assert (= 1 1))
+(assert (not (= 1 2)))
 (assert (not (= 1 nil)))
 
 ; key
-(assert (= :a))
-(assert (= :a :a :a))
-(assert (not (= :a :b :a)))
+(assert (= :a :a))
+(assert (not (= :a :b)))
 (assert (not (= :a "a")))
 
+; sym
+(assert (= 'a 'a))
+(assert (not (= 'a 'b)))
+(assert (not (= 'a "a")))
+
 ; string
-(assert (= "a"))
-(assert (= "a" "a" "a"))
-(assert (not (= "a" "b" "a")))
+(assert (= "a" "a"))
+(assert (not (= "a" "b")))
 (assert (not (= "a" :a)))
 
 ; add comparison for same elements with different length
 
 ; list
-(assert (= (list 1 1 1)))
-(assert (= (list 1 1 1) (list 1 1 1) (list 1 1 1)))
-(assert (not (= (list 1 1 1) (list 1 2 1) (list 1 1 1))))
-(assert (not (= (list 1) (list 1 1))))
-(assert (not (= (list 1 1) (list 1))))
-(assert (not (= () (list 1))))
-(assert (not (= (list 1) ())))
-(assert (not (= (list 1 1 1) [1 1 1])))
+(assert (= '(1 1 1) '(1 1 1)))
+(assert (not (= '(1 2 1) '(1 1 1))))
+(assert (not (= '(1) '(1 1))))
+(assert (not (= '(1 1) '(1))))
+(assert (not (= () '(1))))
+(assert (not (= '(1) ())))
+(assert (not (= '(1 1 1) [1 1 1])))
 
 ; vector
-(assert (= [1 1 1]))
-(assert (= [1 1 1] [1 1 1] [1 1 1]))
-(assert (not (= [1 1 1] [1 2 1] [1 1 1])))
-(assert (not (= [1 1 1] (list 1 1 1))))
+(assert (= [1 1 1] [1 1 1]))
+(assert (not (= [1 2 1] [1 1 1])))
+(assert (not (= [1 1 1] '(1 1 1))))
