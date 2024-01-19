@@ -68,29 +68,46 @@ impl MalType {
             )),
         }
     }
+
+    pub fn label_type(&self) -> MalType {
+        let mut labl = "ʞ:".to_string();
+        labl.push_str(match self {
+            M::Nil => "nil",
+            M::Bool(_) => "bool",
+            M::Int(_) => "int",
+            M::Fun(_, _) | M::MalFun { .. } => "lambda",
+            M::Key(_) => "key",
+            M::Str(_) => "string",
+            M::Sym(_) => "symbol",
+            M::List(_) => "list",
+            M::Vector(_) => "vector",
+            M::Map(_) => "map",
+        });
+        M::Key(labl)
+    }
 }
 
 use crate::types::MalType as M;
 
 // That's a quite chonky function
-fn mal_eq(args: (&MalType, &MalType)) -> bool {
+fn mal_compare(args: (&MalType, &MalType)) -> bool {
     match (args.0, args.1) {
         (M::Nil, M::Nil) => true,
         (M::Bool(a), M::Bool(b)) => a == b,
         (M::Int(a), M::Int(b)) => a == b,
         (M::Key(a), M::Key(b)) | (M::Str(a), M::Str(b)) | (M::Sym(a), M::Sym(b)) => a == b,
         (M::List(a), M::List(b)) | (M::Vector(a), M::Vector(b)) => {
-            a.len() == b.len() && a.iter().zip(b.iter()).all(mal_eq)
+            a.len() == b.len() && a.iter().zip(b.iter()).all(mal_compare)
         }
         _ => false,
     }
 }
 
-pub fn mal_comp(args: &[MalType]) -> MalRet {
+pub fn mal_equals(args: &[MalType]) -> MalRet {
     if args.len() != 2 {
         return Err(MalErr::unrecoverable("Expected 2 arguments"));
     }
-    Ok(M::Bool(mal_eq(bin_unpack(args)?)))
+    Ok(M::Bool(mal_compare(bin_unpack(args)?)))
 }
 
 pub fn mal_assert(args: &[MalType]) -> MalRet {

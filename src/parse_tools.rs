@@ -63,7 +63,6 @@ pub fn load_file(filename: &str, env: &Env) -> MalRet {
     )
 } // WTF this is becoming ever less like rust and more like lisp, did I really completely skip the file reading?
 
-extern crate rustyline;
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
 

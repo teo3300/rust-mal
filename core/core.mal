@@ -18,6 +18,22 @@
         (if b true))))
 
 ; Arithmetic
+(def! + (fn* [a b]
+    (- a (- 0 b))))
+
+(def! / (fn* [a b]
+    (if (= b 0)
+        (raise "Attempting division by 0")
+        (/-unsafe a b))))
+
+(def! abs (fn* [a]
+    (if (> a 0)
+        a
+        (- 0 a))))
+
+(def! mod (fn* [a b]
+    (- a (* (/ a b) b))))
+
 (def! > (fn* [a b]
     (< b a)))
 
@@ -27,49 +43,15 @@
 (def! <= (fn* [a b]
     (>= b a)))
 
-(def! + (fn* [a b]
-    (- a (- 0 b))))
-
-(def! abs (fn* [a]
-    (if (> a 0)
-        a
-        (- 0 a))))
-
-(def! sign-product (fn* [op a b acc]
-    (let* [res (op (abs a) (abs b) acc)]
-        (if (xor (< 0 a) (< 0 b))
-            (- 0 res)
-            res))))
-
-(def! * (fn* [a b]
-    "Recursive product based on sum"
-    (sign-product *-rec a b 0)))
-
-(def! *-rec (fn* [a b acc]
-    (if (= b 0)
-        acc
-        (*-rec a (- b 1) (+ acc a)))))
-
-(def! / (fn* [a b]
-    "recursive division based on subtraction"
-    (if (= b 0)
-        (raise "Attempting division by 0")
-        (sign-product /-rec a b 0))))
-
-(def! /-rec (fn* [a b acc]
-    (if (>= (- a b) 0)
-        (/-rec (- a b) b (+ acc 1))
-        acc)))
-
-(def! mod (fn* [a b]
-    (- a (* (/ a b) b))))
-
 ; Other functions in core.rs
-(def! assert-eq (fn* [a b]
-    (assert (= a b))))
+(def! list? (fn* [a]
+    (= (type a) :list)))
 
 (def! empty? (fn* [l]
     (= (count l) 0)))
+
+(def! assert-eq (fn* [a b]
+    (assert (= a b))))
 
 ;; File-interaction functions
 (def! load-file (fn* [f]

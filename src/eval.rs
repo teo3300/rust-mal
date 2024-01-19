@@ -146,7 +146,9 @@ pub fn eval(ast: &MalType, env: Env) -> MalRet {
                     M::Sym(sym) if sym == "let*" => (ast, env) = let_star_form(args, env.clone())?,
                     M::Sym(sym) if sym == "do" => ast = do_form(args, env.clone())?,
                     M::Sym(sym) if sym == "if" => ast = if_form(args, env.clone())?,
-                    M::Sym(sym) if sym == "fn*" => return fn_star_form(args, env.clone()),
+                    M::Sym(sym) if sym == "fn*" || sym == "λ" /* :) */ => {
+                        return fn_star_form(args, env.clone())
+                    }
                     M::Sym(sym) if sym == "help" => return help_form(args, env.clone()),
                     M::Sym(sym) if sym == "find" => return find_form(args, env.clone()),
                     // Oh God, what have I done
