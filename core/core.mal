@@ -5,27 +5,19 @@
 
 (def! and (fn* [a b]
     (if a
-        (if b true))))
+        b)))
 
 (def! or (fn* [a b]
     (if a
-        true
-        (if b true))))
+        a
+        b)))
 
 (def! xor (fn* [a b]
     (if a
         (not b)
-        (if b true))))
+        b)))
 
 ; Arithmetic
-(def! + (fn* [a b]
-    (- a (- 0 b))))
-
-(def! / (fn* [a b]
-    (if (= b 0)
-        (raise "Attempting division by 0")
-        (/-unsafe a b))))
-
 (def! abs (fn* [a]
     (if (> a 0)
         a

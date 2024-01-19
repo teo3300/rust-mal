@@ -1,4 +1,4 @@
-use crate::env::{bin_unpack, Env};
+use crate::env::{car_cdr, Env};
 use std::{collections::HashMap, rc::Rc};
 
 // All Mal types should inherit from this
@@ -104,10 +104,13 @@ fn mal_compare(args: (&MalType, &MalType)) -> bool {
 }
 
 pub fn mal_equals(args: &[MalType]) -> MalRet {
-    if args.len() != 2 {
-        return Err(MalErr::unrecoverable("Expected 2 arguments"));
-    }
-    Ok(M::Bool(mal_compare(bin_unpack(args)?)))
+    Ok(M::Bool(match args.len() {
+        0 => true,
+        _ => {
+            let (car, cdr) = car_cdr(args)?;
+            cdr.iter().all(|x| mal_compare((car, x)))
+        }
+    }))
 }
 
 pub fn mal_assert(args: &[MalType]) -> MalRet {
