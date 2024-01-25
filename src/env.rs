@@ -1,3 +1,4 @@
+use crate::eval::eval;
 use crate::types::MalErr;
 use crate::types::{MalMap, MalRet, MalType};
 use std::cell::RefCell;
@@ -15,7 +16,7 @@ impl EnvType {
             .data
             .borrow()
             .iter()
-            .map(|(k, _)| k.clone())
+            .map(|(k, _)| k.to_string())
             .collect::<Vec<String>>();
         keys.sort_unstable();
         keys
@@ -26,27 +27,31 @@ pub type Env = Rc<EnvType>;
 // Following rust implementation, using shorthand to always pas Reference count
 
 pub fn env_new(outer: Option<Env>) -> Env {
-    Rc::new(EnvType {
+    Env::new(EnvType {
         data: RefCell::new(MalMap::new()),
         outer,
     })
 }
 
-pub fn env_set(env: &Env, sym: &str, val: &MalType) -> MalType {
+pub fn env_set(env: &Env, sym: &str, val: &MalType) {
     env.data.borrow_mut().insert(sym.to_string(), val.clone());
-    val.clone()
 }
 
 pub fn env_get(env: &Env, sym: &str) -> MalRet {
-    match env.data.borrow().get(sym) {
-        Some(val) => Ok(val.clone()),
-        None => match env.outer.clone() {
-            Some(outer) => env_get(&outer, sym),
-            None => Err(MalErr::unrecoverable(
-                format!("symbol {:?} not defined", sym).as_str(),
-            )),
-        },
+    let mut iter_env = env;
+    loop {
+        if let Some(val) = iter_env.data.borrow().get(sym) {
+            return Ok(val.clone());
+        }
+        if let Some(outer) = &iter_env.outer {
+            iter_env = &outer;
+            continue;
+        }
+        return Err(MalErr::unrecoverable(
+            format!("symbol {:?} not defined", sym).as_str(),
+        ));
     }
+    // Recursive was prettier, but we hate recursion
 }
 
 pub fn env_binds(outer: Env, binds: &MalType, exprs: &[MalType]) -> Result<Env, MalErr> {
@@ -93,10 +98,15 @@ pub fn call_func(func: &MalType, args: &[MalType]) -> CallRet {
             // It's fine to clone the environment here
             // since this is when the function is actually called
             match ast.as_ref() {
-                M::List(list) => Ok(CallFunc::MalFun(
-                    list.last().unwrap_or(&Nil).clone(),
-                    inner_env,
-                )),
+                M::List(list) => {
+                    for x in &list[0..list.len() - 1] {
+                        eval(x, inner_env.clone())?;
+                    }
+                    Ok(CallFunc::MalFun(
+                        list.last().unwrap_or(&Nil).clone(),
+                        inner_env,
+                    ))
+                }
                 _ => scream!(),
             }
         }
@@ -176,7 +186,7 @@ fn first(list: &[MalType]) -> &[MalType] {
 // FIXME: Treat as result for now, change later
 fn last(list: &[MalType]) -> Result<&MalType, MalErr> {
     match list.len() {
-        0 => Err(MalErr::unrecoverable("Mi sono cacato le mutande")),
+        0 => Ok(&MalType::Nil),
         _ => Ok(&list[list.len() - 1]),
     }
 }

@@ -28,7 +28,7 @@ mod functional {
 
     #[test]
     fn builtin_equals() {
-        test!("equals");
+        test!("equals")
     }
 
     #[test]
@@ -38,6 +38,11 @@ mod functional {
 
     #[test]
     fn fibonacci() {
-        test!("fibonacci");
+        test!("fibonacci")
+    }
+
+    #[test]
+    fn forms() {
+        test!("forms")
     }
 }

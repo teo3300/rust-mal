@@ -19,21 +19,12 @@
 
 ; Arithmetic
 (def! abs (fn* [a]
-    (if (> a 0)
-        a
-        (- 0 a))))
+    (if (< a 0)
+        (- 0 a)
+        a)))
 
 (def! mod (fn* [a b]
     (- a (* (/ a b) b))))
-
-(def! > (fn* [a b]
-    (< b a)))
-
-(def! >= (fn* [a b]
-    (not (< a b))))
-
-(def! <= (fn* [a b]
-    (>= b a)))
 
 ; Other functions in core.rs
 (def! list? (fn* [a]
@@ -44,6 +35,9 @@
 
 (def! assert-eq (fn* [a b]
     (assert (= a b))))
+
+(def! assert-fail (fn* [x]
+    (assert (not (ok? (eval x))))))
 
 ;; File-interaction functions
 (def! load-file (fn* [f]

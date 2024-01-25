@@ -311,10 +311,10 @@ mod tests {
                 MalMap::new()
             }
         };
-        assert!(matches!(t.get("n"),   Some(x) if matches!(x.clone(), M::Nil)));
-        assert!(matches!(t.get("t"),   Some(x) if matches!(x.clone(), M::Bool(v) if v)));
-        assert!(matches!(t.get("i"),   Some(x) if matches!(x.clone(), M::Int(v) if v == 1)));
-        assert!(matches!(t.get("s"),   Some(x) if matches!(x.clone(), M::Str(v) if v == "str")));
-        assert!(matches!(t.get("ʞ:s"), Some(x) if matches!(x.clone(), M::Key(v) if v == "ʞ:sym")));
+        assert!(matches!(t.get("n"),   Some(x) if matches!(&x, M::Nil)));
+        assert!(matches!(t.get("t"),   Some(x) if matches!(&x, M::Bool(v) if *v)));
+        assert!(matches!(t.get("i"),   Some(x) if matches!(&x, M::Int(v) if *v == 1)));
+        assert!(matches!(t.get("s"),   Some(x) if matches!(&x, M::Str(v) if v == "str")));
+        assert!(matches!(t.get("ʞ:s"), Some(x) if matches!(&x, M::Key(v) if v == "ʞ:sym")));
     }
 }

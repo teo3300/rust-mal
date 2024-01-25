@@ -4,3 +4,5 @@
 (assert-eq true (ok? 1))
 (ok? (assert true))
 (not (ok? (assert nil)))
+(assert (not (ok? (assert-fail '1))))
+(assert (ok? (assert-fail '(1))))
