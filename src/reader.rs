@@ -79,9 +79,9 @@ impl Reader {
         self.next()?;
 
         match terminator {
-            ")" => Ok(List(MalArgs::new(vector))),
-            "]" => Ok(Vector(MalArgs::new(vector))),
-            "}" => make_map(MalArgs::new(vector)),
+            ")" => Ok(List(vector.into())),
+            "]" => Ok(Vector(vector.into())),
+            "}" => make_map(vector.into()),
             t => Err(MalErr::unrecoverable(
                 format!("Unknown collection terminator: {}", t).as_str(),
             )),
@@ -100,15 +100,15 @@ impl Reader {
                     return Ok(Int(tk.parse::<isize>().unwrap()));
                 } else if tk.starts_with('\"') {
                     if tk.len() > 1 && tk.ends_with('\"') {
-                        return Ok(Str(unescape_str(tk)));
+                        return Ok(Str(unescape_str(tk).into()));
                     }
                     return Err(MalErr::unrecoverable(
                         "End of line reached without closing string",
                     ));
                 } else if tk.starts_with(':') {
-                    return Ok(Key(format!("ʞ{}", tk)));
+                    return Ok(Key(format!("ʞ{}", tk).into()));
                 }
-                Ok(Sym(tk.to_string()))
+                Ok(Sym(tk.into()))
             }
         }
     }
@@ -128,8 +128,8 @@ impl Reader {
             // Ugly quote transformation for quote expansion
             "'" => {
                 self.next()?;
-                Ok(List(Rc::new(vec![
-                    MalType::Sym("quote".to_string()),
+                Ok(List(Rc::new([
+                    MalType::Sym("quote".into()),
                     self.read_form()?,
                 ])))
             }
@@ -168,6 +168,8 @@ fn tokenize(input: &str) -> Tokens {
 
 #[cfg(test)]
 mod tests {
+    use std::borrow::Borrow;
+
     use crate::{
         reader::read_str,
         types::{MalMap, MalType as M},
@@ -262,9 +264,15 @@ mod tests {
         assert!(matches!(r.read_atom(), Ok(x) if matches!(x, M::Nil)));
         assert!(matches!(r.read_atom(), Ok(x) if matches!(x, M::Int(1))));
         assert!(matches!(r.read_atom(), Ok(x) if matches!(x, M::Bool(true))));
-        assert!(matches!(r.read_atom(), Ok(x) if matches!(x.clone(), M::Sym(v) if v == "a")));
-        assert!(matches!(r.read_atom(), Ok(x) if matches!(x.clone(), M::Str(v) if v == "s")));
-        assert!(matches!(r.read_atom(), Ok(x) if matches!(x.clone(), M::Key(v) if v == "ʞ:a")));
+        assert!(
+            matches!(r.read_atom(), Ok(x) if matches!(x.clone(), M::Sym(v) if matches!(v.borrow(), "a")))
+        );
+        assert!(
+            matches!(r.read_atom(), Ok(x) if matches!(x.clone(), M::Str(v) if matches!(v.borrow(), "s")))
+        );
+        assert!(
+            matches!(r.read_atom(), Ok(x) if matches!(x.clone(), M::Key(v) if matches!(v.borrow(), "ʞ:a")))
+        );
         assert!(matches!(r.read_atom(), Err(e) if !e.is_recoverable()));
         assert!(matches!(r.read_atom(), Err(e) if !e.is_recoverable()));
         assert!(matches!(r.read_atom(), Err(e) if !e.is_recoverable()));
@@ -314,7 +322,11 @@ mod tests {
         assert!(matches!(t.get("n"),   Some(x) if matches!(&x, M::Nil)));
         assert!(matches!(t.get("t"),   Some(x) if matches!(&x, M::Bool(v) if *v)));
         assert!(matches!(t.get("i"),   Some(x) if matches!(&x, M::Int(v) if *v == 1)));
-        assert!(matches!(t.get("s"),   Some(x) if matches!(&x, M::Str(v) if v == "str")));
-        assert!(matches!(t.get("ʞ:s"), Some(x) if matches!(&x, M::Key(v) if v == "ʞ:sym")));
+        assert!(
+            matches!(t.get("s"),   Some(x) if matches!(&x, M::Str(v) if matches!(v.borrow(), "str")))
+        );
+        assert!(
+            matches!(t.get("ʞ:s"), Some(x) if matches!(&x, M::Key(v) if matches!(v.borrow(), "ʞ:sym")))
+        );
     }
 }

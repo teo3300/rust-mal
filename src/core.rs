@@ -35,7 +35,7 @@ use crate::parse_tools::read_file;
 use crate::printer::pr_str;
 use crate::reader::{read_str, Reader};
 use crate::types::MalType::{Fun, Int, List, Nil, Str};
-use crate::types::{mal_assert, mal_equals, MalArgs, MalErr};
+use crate::types::{mal_assert, mal_equals, MalErr};
 
 pub fn ns_init() -> Env {
     env_init!(None,
@@ -51,11 +51,11 @@ pub fn ns_init() -> Env {
         ">"             => Fun(|a| comparison_op(   |a, b| a >  b, a), "Returns true if the first argument is strictly greater than the second one, nil otherwise"),
         "<="            => Fun(|a| comparison_op(   |a, b| a <= b, a), "Returns true if the first argument is smaller than or equal to the second one, nil otherwise"),
         ">="            => Fun(|a| comparison_op(   |a, b| a >= b, a), "Returns true if the first argument is greater than or equal to the second one, nil otherwise"),
-        "pr-str"        => Fun(|a| Ok(Str(a.iter().map(|i| pr_str(i, true)).collect::<Vec<String>>().join(" "))), "Print readably all arguments"),
-        "str"           => Fun(|a| Ok(Str(a.iter().map(|i| pr_str(i, false)).collect::<Vec<String>>().join(""))), "Print non readably all arguments"),
+        "pr-str"        => Fun(|a| Ok(Str(a.iter().map(|i| pr_str(i, true)).collect::<Vec<String>>().join(" ").into())), "Print readably all arguments"),
+        "str"           => Fun(|a| Ok(Str(a.iter().map(|i| pr_str(i, false)).collect::<Vec<String>>().join("").into())), "Print non readably all arguments"),
         "prn"           => Fun(|a| {a.iter().for_each(|a| print!("{} ", pr_str(a, false))); Ok(Nil) }, "Print readably all the arguments"),
         "println"       => Fun(|a| {a.iter().for_each(|a| print!("{} ", pr_str(a, false))); println!(); Ok(Nil) }, "Print readably all the arguments"),
-        "list"          => Fun(|a| Ok(List(MalArgs::new(a.to_vec()))), "Return the arguments as a list"),
+        "list"          => Fun(|a| Ok(List(a.into())), "Return the arguments as a list"),
         "type"          => Fun(|a| Ok(car(a)?.label_type()), "Returns a label indicating the type of it's argument"),
         "count"         => Fun(|a| Ok(Int(car(a)?.if_list()?.len() as isize)), "Return the number of elements in the first argument"),
         "="             => Fun(mal_equals, "Return true if the first two parameters are the same type and content, in case of lists propagate to all elements (NOT IMPLEMENTED for 'Map', 'Fun' and 'MalFun')"),
@@ -63,7 +63,7 @@ pub fn ns_init() -> Env {
         "read-string"   => Fun(|a| read_str(Reader::new().push(car(a)?.if_string()?)).map_err(MalErr::severe), "Tokenize and read the first argument"),
         "slurp"         => Fun(|a| Ok(Str(read_file(car(a)?.if_string()?)?)), "Read a file and return the content as a string"),
         "env"           => Fun(|a| match env::var(car(a)?.if_string()?) {
-            Ok(s) => Ok(Str(s)),
+            Ok(s) => Ok(Str(s.into())),
             _ => Ok(Nil),
         }, "Retrieve the specified environment variable, returns NIL if that variable does not exist")
     )

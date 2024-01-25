@@ -1,6 +1,11 @@
 use crate::env::{car_cdr, Env};
 use std::{collections::HashMap, rc::Rc};
 
+pub type MalStr = Rc<str>;
+pub type MalArgs = Rc<[MalType]>;
+pub type MalMap = HashMap<MalStr, MalType>;
+pub type MalRet = Result<MalType, MalErr>;
+
 // All Mal types should inherit from this
 #[derive(Clone)]
 pub enum MalType {
@@ -15,9 +20,9 @@ pub enum MalType {
         env: Env,
     }, // Used for functions defined within mal
     // Use Rc so I can now clone like there's no tomorrow
-    Sym(String),
-    Key(String),
-    Str(String),
+    Sym(MalStr),
+    Key(MalStr),
+    Str(MalStr),
     Int(isize),
     Bool(bool),
     Nil,
@@ -70,20 +75,19 @@ impl MalType {
     }
 
     pub fn label_type(&self) -> MalType {
-        let mut labl = "ʞ:".to_string();
-        labl.push_str(match self {
-            M::Nil => "nil",
-            M::Bool(_) => "bool",
-            M::Int(_) => "int",
-            M::Fun(_, _) | M::MalFun { .. } => "lambda",
-            M::Key(_) => "key",
-            M::Str(_) => "string",
-            M::Sym(_) => "symbol",
-            M::List(_) => "list",
-            M::Vector(_) => "vector",
-            M::Map(_) => "map",
-        });
-        M::Key(labl)
+        Key(match self {
+            M::Nil => "ʞ:nil",
+            M::Bool(_) => "ʞ:bool",
+            M::Int(_) => "ʞ:int",
+            M::Fun(_, _) | M::MalFun { .. } => "ʞ:lambda",
+            M::Key(_) => "ʞ:key",
+            M::Str(_) => "ʞ:string",
+            M::Sym(_) => "ʞ:symbol",
+            M::List(_) => "ʞ:ist",
+            M::Vector(_) => "ʞ:vector",
+            M::Map(_) => "ʞ:map",
+        }
+        .into())
     }
 }
 
@@ -163,10 +167,6 @@ impl MalErr {
     }
 }
 
-pub type MalArgs = Rc<Vec<MalType>>;
-pub type MalMap = HashMap<String, MalType>;
-pub type MalRet = Result<MalType, MalErr>;
-
 use crate::printer::prt;
 use MalType::{Key, Map, Str};
 
@@ -181,7 +181,7 @@ pub fn make_map(list: MalArgs) -> MalRet {
         match &list[i] {
             Key(k) | Str(k) => {
                 let v = &list[i + 1];
-                map.insert(k.to_string(), v.clone());
+                map.insert(k.clone(), v.clone());
             }
             _ => {
                 return Err(MalErr::unrecoverable(

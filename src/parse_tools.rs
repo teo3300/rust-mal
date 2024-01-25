@@ -2,7 +2,7 @@ use crate::env::Env;
 use crate::eval::eval;
 use crate::reader::{read_str, Reader};
 use crate::step6_file::rep;
-use crate::types::{MalErr, MalRet};
+use crate::types::{MalErr, MalRet, MalStr};
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
@@ -39,7 +39,7 @@ pub fn load_home_file(filename: &str, env: &Env, warn: bool) {
     }
 }
 
-pub fn read_file(filename: &str) -> Result<String, MalErr> {
+pub fn read_file(filename: &str) -> Result<MalStr, MalErr> {
     let mut file = File::open(filename).map_err(|_| {
         MalErr::unrecoverable(format!("Failed to open file '{}'", filename).as_str())
     })?;
@@ -49,7 +49,7 @@ pub fn read_file(filename: &str) -> Result<String, MalErr> {
         MalErr::unrecoverable(format!("Failed to read content of '{}'", filename).as_str())
     })?;
 
-    Ok(content)
+    Ok(content.into())
 }
 
 pub fn load_file(filename: &str, env: &Env) -> MalRet {

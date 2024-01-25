@@ -34,7 +34,7 @@ pub fn env_new(outer: Option<Env>) -> Env {
 }
 
 pub fn env_set(env: &Env, sym: &str, val: &MalType) {
-    env.data.borrow_mut().insert(sym.to_string(), val.clone());
+    env.data.borrow_mut().insert(sym.into(), val.clone());
 }
 
 pub fn env_get(env: &Env, sym: &str) -> MalRet {

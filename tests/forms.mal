@@ -2,6 +2,7 @@
 (assert (not (def! FALSE nil)))
 (assert (def! TRUE true))
 
+(println :def)
 (def! value-0 0)
 (assert-eq value-0 0)
 (assert-eq
@@ -13,6 +14,7 @@
 (assert-fail '(def!))
 (assert-fail '(def! a))
 
+(println :do)
 ; do
 (assert-eq
     (do 1 2 3)
@@ -29,6 +31,7 @@
 
 (assert-eq (do) nil)
 
+(println :ififififififififif)
 ; if
 (assert (if true 1))
 (assert (not (if false 1)))

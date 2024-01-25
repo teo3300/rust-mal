@@ -4,6 +4,7 @@ use crate::env::{first_last, Env};
 use crate::printer::prt;
 use crate::types::MalType as M;
 use crate::types::{MalArgs, MalErr, MalMap, MalRet, MalType};
+use std::borrow::Borrow;
 use std::rc::Rc;
 
 /// Resolve the first element of the list as the function name and call it
@@ -98,7 +99,7 @@ fn fn_star_form(list: &[MalType], env: Env) -> MalRet {
     Ok(M::MalFun {
         // eval: eval_ast,
         params: Rc::new(binds.clone()),
-        ast: Rc::new(M::List(MalArgs::new(exprs.to_vec()))),
+        ast: Rc::new(M::List(exprs.into())),
         env,
     })
 }
@@ -134,6 +135,21 @@ pub fn outermost(env: &Env) -> Env {
     env.clone()
 }
 
+macro_rules! apply {
+    ($ast:expr, $env:expr) => {{
+        let apply_list = &eval_ast(&$ast, $env.clone())?;
+        let eval_ret = eval_func(apply_list)?;
+
+        match eval_ret {
+            CallFunc::Builtin(ret) => return Ok(ret),
+            CallFunc::MalFun(fun_ast, fun_env) => {
+                $ast = fun_ast;
+                $env = fun_env;
+            }
+        }
+    }};
+}
+
 /// Intermediate function to discern special forms from defined symbols
 pub fn eval(ast: &MalType, env: Env) -> MalRet {
     let mut ast = ast.clone();
@@ -143,46 +159,39 @@ pub fn eval(ast: &MalType, env: Env) -> MalRet {
             M::List(list) if list.is_empty() => return Ok(ast.clone()),
             M::List(list) => {
                 let (symbol, args) = car_cdr(list)?;
-                match symbol {
-                    M::Sym(sym) if sym == "def!" => return def_bang_form(args, env.clone()), // Set for env
-                    M::Sym(sym) if sym == "let*" => (ast, env) = let_star_form(args, env.clone())?,
-                    M::Sym(sym) if sym == "do" => ast = do_form(args, env.clone())?,
-                    M::Sym(sym) if sym == "if" => ast = if_form(args, env.clone())?,
-                    M::Sym(sym) if sym == "fn*" || sym == "λ" /* :) */ => {
-                        return fn_star_form(args, env.clone())
-                    }
-                    M::Sym(sym) if sym == "help" => return help_form(args, env.clone()),
-                    M::Sym(sym) if sym == "find" => return find_form(args, env.clone()),
-                    // Oh God, what have I done
-                    M::Sym(sym) if sym == "quote" => return Ok(car(args)?.clone()),
-                    M::Sym(sym) if sym == "ok?" => {
-                        return match eval(car(args)?, env.clone()) {
-                            Err(_) => Ok(M::Nil),
-                            _ => Ok(M::Bool(true)),
+                if let M::Sym(sym) = symbol {
+                    match sym.borrow() {
+                        // I don't like to borrow tho
+                        "def!" => return def_bang_form(args, env.clone()), // Set for env
+                        "let*" => {(ast, env) = let_star_form(args, env.clone())?; continue;},
+                        "do" => {ast = do_form(args, env.clone())?; continue;},
+                        "if" => {ast = if_form(args, env.clone())?; continue;},
+                        "fn*" | "λ" /* :) */ => {
+                            return fn_star_form(args, env.clone())
                         }
-                    }
-                    // Special form, sad
-                    // Bruh, is basically double eval
-                    M::Sym(sym) if sym == "eval" => {
-                        ast = eval(env::car(args)?, env.clone())?;
-                        // Climb to the outermost environment (The repl env)
-                        env = outermost(&env);
-                    }
-                    // Filter out special forms
-                    // "apply"/invoke
-                    _ => {
-                        let apply_list = &eval_ast(&ast, env.clone())?;
-                        let eval_ret = eval_func(apply_list)?;
-
-                        match eval_ret {
-                            CallFunc::Builtin(ret) => return Ok(ret),
-                            CallFunc::MalFun(fun_ast, fun_env) => {
-                                ast = fun_ast;
-                                env = fun_env;
+                        "help" => return help_form(args, env.clone()),
+                        "find" => return find_form(args, env.clone()),
+                        // Oh God, what have I done
+                        "quote" => return Ok(car(args)?.clone()),
+                        "ok?" => {
+                            return match eval(car(args)?, env.clone()) {
+                                Err(_) => Ok(M::Nil),
+                                _ => Ok(M::Bool(true)),
                             }
                         }
+                        // Special form, sad
+                        // Bruh, is basically double eval
+                        "eval" => {
+                            ast = eval(env::car(args)?, env.clone())?;
+                            // Climb to the outermost environment (The repl env)
+                            env = outermost(&env);
+                            continue;
+                        }
+                        _ => {}
                     }
-                };
+                }
+                // "apply"/invoke
+                apply!(ast, env)
             }
             _ => return eval_ast(&ast, env),
         }
@@ -195,14 +204,14 @@ fn eval_collection(list: &MalArgs, env: Env) -> Result<MalArgs, MalErr> {
     for el in list.as_ref() {
         ret.push(eval(el, env.clone())?);
     }
-    Ok(MalArgs::new(ret))
+    Ok(ret.into())
 }
 
 /// Evaluate the values of a map
 fn eval_map(map: &MalMap, env: Env) -> MalRet {
     let mut ret = MalMap::new();
     for (k, v) in map {
-        ret.insert(k.to_string(), eval(v, env.clone())?);
+        ret.insert(k.clone(), eval(v, env.clone())?);
     }
     Ok(M::Map(ret))
 }

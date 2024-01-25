@@ -5,9 +5,9 @@ use crate::types::{escape_str, MalType};
 
 fn key_str(val: &str) -> MalType {
     if val.starts_with('ʞ') {
-        M::Key(val.to_string())
+        M::Key(val.into())
     } else {
-        M::Str(val.to_string())
+        M::Str(val.into())
     }
 }
 
