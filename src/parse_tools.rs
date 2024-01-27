@@ -70,6 +70,7 @@ pub fn interactive(env: Env) {
     const HISTORY: &str = ".mal-history";
     let home = get_home_path(&env).unwrap();
     let history = home + "/" + HISTORY;
+    eval_str(format!("(def! MAL_HISTORY \"{}\")", history).as_str(), &env).unwrap();
 
     // Using "Editor" instead of the standard I/O because I hate myself but not this much
     // TODO: remove unwrap and switch to a better error handling

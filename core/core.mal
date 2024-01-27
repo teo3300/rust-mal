@@ -19,12 +19,21 @@
 
 ; Arithmetic
 (def! abs (fn* [a]
-    (if (< a 0)
-        (- 0 a)
-        a)))
+    (if (> a 0)
+        a
+        (- 0 a))))
 
 (def! mod (fn* [a b]
     (- a (* (/ a b) b))))
+
+(def! > (fn* [a b]
+    (< b a)))
+
+(def! >= (fn* [a b]
+    (not (< a b))))
+
+(def! <= (fn* [a b]
+    (>= b a)))
 
 ; Other functions in core.rs
 (def! list? (fn* [a]
@@ -49,3 +58,6 @@
 ;; Shorthand
 (def! quit (fn* []
     (exit 0)))
+
+;; variables
+(def! MAL_HISTORY (str MAL_HOME "/" ".mal-history"))

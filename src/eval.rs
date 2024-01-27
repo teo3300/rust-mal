@@ -7,6 +7,16 @@ use crate::types::{MalArgs, MalErr, MalMap, MalRet, MalType};
 use std::borrow::Borrow;
 use std::rc::Rc;
 
+macro_rules! forms {
+    ($($name:ident : $value:expr),*) => {
+        $(
+            const $name: &'static str = $value;
+        )*
+    };
+}
+
+forms!(NAME_DEF : "def!");
+
 /// Resolve the first element of the list as the function name and call it
 /// with the other elements as arguments
 fn eval_func(list: &MalType) -> CallRet {
@@ -162,7 +172,7 @@ pub fn eval(ast: &MalType, env: Env) -> MalRet {
                 if let M::Sym(sym) = symbol {
                     match sym.borrow() {
                         // I don't like to borrow tho
-                        "def!" => return def_bang_form(args, env.clone()), // Set for env
+                        NAME_DEF => return def_bang_form(args, env.clone()), // Set for env
                         "let*" => {(ast, env) = let_star_form(args, env.clone())?; continue;},
                         "do" => {ast = do_form(args, env.clone())?; continue;},
                         "if" => {ast = if_form(args, env.clone())?; continue;},

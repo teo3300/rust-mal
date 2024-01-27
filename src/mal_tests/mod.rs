@@ -17,7 +17,7 @@ mod functional {
     }
 
     #[test]
-    fn assert_fail() {
+    fn assert() {
         test!("assert")
     }
 
