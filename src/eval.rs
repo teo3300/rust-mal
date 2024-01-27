@@ -14,8 +14,17 @@ macro_rules! forms {
         )*
     };
 }
-
-forms!(NAME_DEF : "def!");
+forms!(NAME_DEF     : "def!",
+       NAME_LET     : "let*",
+       NAME_DO      : "do",
+       NAME_IF      : "if",
+       NAME_FN      : "fn*",
+       NAME_FN_ALT  : "λ", 
+       NAME_HELP    : "help",
+       NAME_FIND    : "find",
+       NAME_QUOTE   : "quote",
+       NAME_OK      : "ok?",
+       NAME_EVAL    : "eval");
 
 /// Resolve the first element of the list as the function name and call it
 /// with the other elements as arguments
@@ -173,17 +182,17 @@ pub fn eval(ast: &MalType, env: Env) -> MalRet {
                     match sym.borrow() {
                         // I don't like to borrow tho
                         NAME_DEF => return def_bang_form(args, env.clone()), // Set for env
-                        "let*" => {(ast, env) = let_star_form(args, env.clone())?; continue;},
-                        "do" => {ast = do_form(args, env.clone())?; continue;},
-                        "if" => {ast = if_form(args, env.clone())?; continue;},
-                        "fn*" | "λ" /* :) */ => {
+                        NAME_LET => {(ast, env) = let_star_form(args, env.clone())?; continue;},
+                        NAME_DO  => {ast = do_form(args, env.clone())?; continue;},
+                        NAME_IF  => {ast = if_form(args, env.clone())?; continue;},
+                        NAME_FN | NAME_FN_ALT /* :) */ => {
                             return fn_star_form(args, env.clone())
                         }
-                        "help" => return help_form(args, env.clone()),
-                        "find" => return find_form(args, env.clone()),
+                        NAME_HELP => return help_form(args, env.clone()),
+                        NAME_FIND => return find_form(args, env.clone()),
                         // Oh God, what have I done
-                        "quote" => return Ok(car(args)?.clone()),
-                        "ok?" => {
+                        NAME_QUOTE => return Ok(car(args)?.clone()),
+                        NAME_OK => {
                             return match eval(car(args)?, env.clone()) {
                                 Err(_) => Ok(M::Nil),
                                 _ => Ok(M::Bool(true)),
@@ -191,7 +200,7 @@ pub fn eval(ast: &MalType, env: Env) -> MalRet {
                         }
                         // Special form, sad
                         // Bruh, is basically double eval
-                        "eval" => {
+                        NAME_EVAL => {
                             ast = eval(env::car(args)?, env.clone())?;
                             // Climb to the outermost environment (The repl env)
                             env = outermost(&env);
