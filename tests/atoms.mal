@@ -1,0 +1,6 @@
+; atom?
+(assert (atom? (atom 1)))
+(assert (not (atom? 1)))
+
+; deref
+(assert-eq (deref (atom 1)) 1)

@@ -31,7 +31,6 @@
 
 (assert-eq (do) nil)
 
-(println :ififififififififif)
 ; if
 (assert (if true 1))
 (assert (not (if false 1)))

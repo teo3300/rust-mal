@@ -39,6 +39,9 @@
 (def! list? (fn* [a]
     (= (type a) :list)))
 
+(def! atom? (fn* [a]
+    (= (type a) :atom)))
+
 (def! empty? (fn* [l]
     (= (count l) 0)))
 
@@ -61,3 +64,68 @@
 
 ;; variables
 (def! MAL_HISTORY (str MAL_HOME "/" ".mal-history"))
+
+;; helper functions
+;   these functions are never called, their symbols should always resolve
+;   in a special form, they are here only to provide informations through
+;   the "find" and "help" functions
+(def! def! (fn* [symbol value] "==SPECIAL FORM=="
+    "<symbol>: Sym"
+    "assign <value> to <symbol> in the current environment"
+    "#returns: <value>"))
+
+(def! let* (fn* [binding statement...] "==SPECIAL FORM=="
+    "<bindings>: Vec"
+    "create a new environment and assign values to symbols according"
+    "to the <binding> vector then evaluate each <statement>"
+    "#returns: result of the last evaluation"))
+
+(def! do (fn* [statement...] "==SPECIAL FORM=="
+    "evaluate each <statement> in the current environment"
+    "#returns: result of the last evalutaion"))
+
+(def! if (fn* [condition if-true if-false] "==SPECIAL FORM=="
+    "first evaluate <condition>, based on the result of evaluation"
+    "evaluates one of the two conditional branches, a missing branch"
+    "evaluates to NIL"
+    "#returns: result of the last evaluation"))
+
+(def! fn* (fn* [arguments statement...] "==SPECIAL FORM=="
+    "arguments: Vec"
+    "#alias: λ"                                             ; >:3
+    "#returns: new lambda that accepts <arguments>, evaluates each"
+    "        : <statement> and returns the last evaluation's result"))
+
+(def! help (fn* [symbol] "==SPECIAL FORM=="
+    "symbol: Sym"
+    "display an helper f or the specified symbol"
+    "#alias: h"
+    "#returns: NIL"))
+
+(def! find (fn* [substring...] "==SPECIAL FORM=="
+    "print all the known symbols partially matching <substring> in"
+    "the current environment"
+    "#alias f"
+    "#returns: NIL"))
+
+(def! quote (fn* [statement] "==SPECIAL FORM=="
+    "prevents <statement> from being evaluated, it's possible to use"
+    "the ' symbol: 'sym is equivalent to (quote sym)"))
+
+(def! ok? (fn* [statement] "==SPECIAL FORM=="
+    "evaluate <statement>"
+    "#returns: true if  evaluation succeeds, NIL otherwise"))
+
+(def! eval (fn* [statement] "==SPECIAL FORM=="
+    "evaluate <statement>"
+    "#returns: the result of the evaluation"))
+
+(def! BANNER
+    (str 
+        "; rust-mal: a toy lisp interpreter written in rust\n"
+        "; (find [pattern...])  : list symbols matching all patterns\n"
+        "; (help <symbol>)      : print information about a symbol\n"
+        ";\n"
+        "; enjoy ^.^\n"))
+
+(println BANNER)

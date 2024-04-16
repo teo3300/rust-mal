@@ -53,6 +53,7 @@ pub fn pr_str(ast: &MalType, print_readably: bool) -> String {
         ),
         M::Fun(..) => "#<builtin>".to_string(),
         M::MalFun { .. } => "#<function>".to_string(),
+        M::Atom(sub) => format!("Atom({})", pr_str(sub, print_readably)),
     }
 }
 
@@ -61,7 +62,7 @@ pub fn prt(ast: &MalType) -> String {
 }
 
 pub fn print_malfun(sym: &str, params: Rc<MalType>, ast: Rc<MalType>) {
-    println!("{}\t[function]: {}", sym, prt(&params));
+    println!("; {}\t[function]: {}", sym, prt(&params));
     ast.as_ref()
         .if_list()
         .unwrap_or(&[])

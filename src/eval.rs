@@ -21,6 +21,7 @@ forms!(NAME_DEF     : "def!",
        NAME_FN      : "fn*",
        NAME_FN_ALT  : "λ", 
        NAME_HELP    : "help",
+       NAME_HELP_ALT: "h",
        NAME_FIND    : "find",
        NAME_QUOTE   : "quote",
        NAME_OK      : "ok?",
@@ -188,7 +189,7 @@ pub fn eval(ast: &MalType, env: Env) -> MalRet {
                         NAME_FN | NAME_FN_ALT /* :) */ => {
                             return fn_star_form(args, env.clone())
                         }
-                        NAME_HELP => return help_form(args, env.clone()),
+                        NAME_HELP | NAME_HELP_ALT => return help_form(args, env.clone()),
                         NAME_FIND => return find_form(args, env.clone()),
                         // Oh God, what have I done
                         NAME_QUOTE => return Ok(car(args)?.clone()),

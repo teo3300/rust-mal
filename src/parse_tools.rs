@@ -92,7 +92,7 @@ pub fn interactive(env: Env) {
             // // Read line to compose program input
             // let mut line = String::new();
             // io::stdin().read_line(&mut line).unwrap();
-            let line = rl.readline("user> ");
+            let line = rl.readline("; user> ");
 
             match line {
                 Ok(line) => {
@@ -105,7 +105,7 @@ pub fn interactive(env: Env) {
 
                     // Perform rep on whole available input
                     match rep(&parser, &env) {
-                        Ok(output) => output.iter().for_each(|el| eprintln!("[{}]> {}", num, el)),
+                        Ok(output) => output.iter().for_each(|el| println!("; [{}]> {}", num, el)),
                         Err(error) => {
                             if error.is_recoverable() {
                                 // && line != "\n" {

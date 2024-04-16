@@ -25,6 +25,7 @@ pub enum MalType {
     Str(MalStr),
     Int(isize),
     Bool(bool),
+    Atom(Rc<MalType>),
     Nil,
 }
 
@@ -74,6 +75,15 @@ impl MalType {
         }
     }
 
+    pub fn if_atom(&self) -> Result<&MalType, MalErr> {
+        match self {
+            Self::Atom(sym) => Ok(sym),
+            _ => Err(MalErr::unrecoverable(
+                format!("{:?} is not an atom", prt(self)).as_str(),
+            )),
+        }
+    }
+
     pub fn label_type(&self) -> MalType {
         Key(match self {
             M::Nil => "ʞ:nil",
@@ -83,9 +93,10 @@ impl MalType {
             M::Key(_) => "ʞ:key",
             M::Str(_) => "ʞ:string",
             M::Sym(_) => "ʞ:symbol",
-            M::List(_) => "ʞ:ist",
+            M::List(_) => "ʞ:list",
             M::Vector(_) => "ʞ:vector",
             M::Map(_) => "ʞ:map",
+            M::Atom(_) => "ʞ:atom",
         }
         .into())
     }

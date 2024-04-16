@@ -45,4 +45,14 @@ mod functional {
     fn forms() {
         test!("forms")
     }
+
+    #[test]
+    fn lists() {
+        test!("lists")
+    }
+
+    #[test]
+    fn atoms() {
+        test!("atoms")
+    }
 }

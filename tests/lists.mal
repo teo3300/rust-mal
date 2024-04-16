@@ -5,5 +5,5 @@
 ; empty?
 (assert (empty? ()))
 (assert (empty? (list)))
-(assert (not (empty? ())))
-(assert (not (empty? (list (1 2 3)))))
+(assert (not (empty? '(1 2 3))))
+(assert (not (empty? (list 1 2 3))))
