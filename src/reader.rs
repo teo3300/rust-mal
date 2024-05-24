@@ -133,6 +133,13 @@ impl Reader {
                     self.read_form()?,
                 ])))
             }
+            "@" => {
+                self.next()?;
+                Ok(List(Rc::new([
+                    MalType::Sym("deref".into()),
+                    self.read_form()?,
+                ])))
+            }
             _ => self.read_atom(),
         }
     }

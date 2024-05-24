@@ -1,5 +1,5 @@
 use crate::env::{car_cdr, Env};
-use std::{collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 pub type MalStr = Rc<str>;
 pub type MalArgs = Rc<[MalType]>;
@@ -25,7 +25,7 @@ pub enum MalType {
     Str(MalStr),
     Int(isize),
     Bool(bool),
-    Atom(Rc<MalType>),
+    Atom(Rc<RefCell<MalType>>),
     Nil,
 }
 
@@ -75,29 +75,21 @@ impl MalType {
         }
     }
 
-    pub fn if_atom(&self) -> Result<&MalType, MalErr> {
-        match self {
-            Self::Atom(sym) => Ok(sym),
-            _ => Err(MalErr::unrecoverable(
-                format!("{:?} is not an atom", prt(self)).as_str(),
-            )),
-        }
-    }
-
     pub fn label_type(&self) -> MalType {
-        Key(match self {
-            M::Nil => "ʞ:nil",
-            M::Bool(_) => "ʞ:bool",
-            M::Int(_) => "ʞ:int",
-            M::Fun(_, _) | M::MalFun { .. } => "ʞ:lambda",
-            M::Key(_) => "ʞ:key",
-            M::Str(_) => "ʞ:string",
-            M::Sym(_) => "ʞ:symbol",
-            M::List(_) => "ʞ:list",
-            M::Vector(_) => "ʞ:vector",
-            M::Map(_) => "ʞ:map",
-            M::Atom(_) => "ʞ:atom",
-        }
+        Key(("ʞ:".to_owned()
+            + match self {
+                M::Nil => "nil",
+                M::Bool(_) => "bool",
+                M::Int(_) => "int",
+                M::Fun(_, _) | M::MalFun { .. } => "lambda",
+                M::Key(_) => "key",
+                M::Str(_) => "string",
+                M::Sym(_) => "symbol",
+                M::List(_) => "list",
+                M::Vector(_) => "vector",
+                M::Map(_) => "map",
+                M::Atom(_) => "atom",
+            })
         .into())
     }
 }
@@ -133,6 +125,22 @@ pub fn mal_assert(args: &[MalType]) -> MalRet {
         return Err(MalErr::unrecoverable("Assertion failed"));
     }
     Ok(M::Nil)
+}
+
+pub fn reset_bang(args: &[MalType]) -> MalRet {
+    if args.len() < 2 {
+        return Err(MalErr::unrecoverable("reset requires two arguments"));
+    }
+    let val = &args[1];
+    match &args[0] {
+        M::Atom(sym) => {
+            *std::cell::RefCell::<_>::borrow_mut(sym) = val.clone();
+            Ok(val.clone())
+        }
+        _ => Err(MalErr::unrecoverable(
+            format!("{:?} is not an atom", prt(&args[1])).as_str(),
+        )),
+    }
 }
 
 #[derive(PartialEq, Clone, Copy, Debug)]

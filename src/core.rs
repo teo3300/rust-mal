@@ -1,5 +1,4 @@
-use std::env;
-use std::rc::Rc;
+use std::{cell::RefCell, env, rc::Rc};
 
 use crate::env::{any_zero, arithmetic_op, car, comparison_op, env_new, env_set, mal_exit, Env};
 
@@ -36,7 +35,7 @@ use crate::parse_tools::read_file;
 use crate::printer::pr_str;
 use crate::reader::{read_str, Reader};
 use crate::types::MalType::{Atom, Fun, Int, List, Nil, Str};
-use crate::types::{mal_assert, mal_equals, MalErr};
+use crate::types::{mal_assert, mal_equals, reset_bang, MalErr};
 
 pub fn ns_init() -> Env {
     env_init!(None,
@@ -63,8 +62,9 @@ pub fn ns_init() -> Env {
         "assert"        => Fun(mal_assert, "Return an error if assertion fails"),
         "read-string"   => Fun(|a| read_str(Reader::new().push(car(a)?.if_string()?)).map_err(MalErr::severe), "Tokenize and read the first argument"),
         "slurp"         => Fun(|a| Ok(Str(read_file(car(a)?.if_string()?)?)), "Read a file and return the content as a string"),
-        "atom"          => Fun(|a| Ok(Atom(Rc::new(car(a)?.clone()))), "Return an atom pointing to the given arg"),
-        "deref"         => Fun(|a| Ok(car(a)?.if_atom()?.clone()), "Return the content of the atom argumet"),
+        "atom"          => Fun(|a| Ok(Atom(Rc::new(RefCell::new(car(a)?.clone())))), "Return an atom pointing to the given arg"),
+        "deref"         => Fun(|a| match car(a)? { Atom(a) => Ok(a.borrow().clone()), _ => todo!("Cacca suprema") }, "Return the content of the atom argumet"),
+        "reset!"        => Fun(reset_bang, "Set the value of the first argument to the second argument"),
         "env"           => Fun(|a| match env::var(car(a)?.if_string()?) {
             Ok(s) => Ok(Str(s.into())),
             _ => Ok(Nil),
