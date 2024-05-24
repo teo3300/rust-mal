@@ -1,6 +1,8 @@
 use std::{cell::RefCell, env, rc::Rc};
 
-use crate::env::{any_zero, arithmetic_op, car, comparison_op, env_new, env_set, mal_exit, Env};
+use crate::env::{
+    any_zero, arithmetic_op, car, comparison_op, env_new, env_set, mal_car, mal_cdr, mal_exit, Env,
+};
 
 // This is the first time I implement a macro, and I'm copying it
 // so I will comment this a LOT
@@ -59,6 +61,8 @@ pub fn ns_init() -> Env {
         "type"          => Fun(|a| Ok(car(a)?.label_type()), "Returns a label indicating the type of it's argument"),
         "count"         => Fun(|a| Ok(Int(car(a)?.if_list()?.len() as isize)), "Return the number of elements in the first argument"),
         "="             => Fun(mal_equals, "Return true if the first two parameters are the same type and content, in case of lists propagate to all elements (NOT IMPLEMENTED for 'Map', 'Fun' and 'MalFun')"),
+        "car"           => Fun(|a| mal_car(car(a)?), "Returns the first element of the list, NIL if its empty"),
+        "cdr"           => Fun(|a| mal_cdr(car(a)?), "Returns all the list but the first element"),
         "assert"        => Fun(mal_assert, "Return an error if assertion fails"),
         "read-string"   => Fun(|a| read_str(Reader::new().push(car(a)?.if_string()?)).map_err(MalErr::severe), "Tokenize and read the first argument"),
         "slurp"         => Fun(|a| Ok(Str(read_file(car(a)?.if_string()?)?)), "Read a file and return the content as a string"),

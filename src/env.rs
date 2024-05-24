@@ -170,6 +170,20 @@ pub fn cdr(list: &[MalType]) -> &[MalType] {
     }
 }
 
+pub fn mal_cdr(arg: &MalType) -> MalRet {
+    let list = arg.if_list()?;
+    Ok(MalType::List(cdr(list).into()))
+}
+
+pub fn mal_car(arg: &MalType) -> MalRet {
+    let list = arg.if_list()?;
+    if list.is_empty() {
+        Ok(Nil)
+    } else {
+        Ok(list[0].clone())
+    }
+}
+
 /// Extract the car and cdr from a list
 pub fn car_cdr(list: &[MalType]) -> Result<(&MalType, &[MalType]), MalErr> {
     Ok((car(list)?, cdr(list)))

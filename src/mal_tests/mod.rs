@@ -55,4 +55,9 @@ mod functional {
     fn atoms() {
         test!("atoms")
     }
+
+    #[test]
+    fn car_cdr() {
+        test!("car-cdr")
+    }
 }
