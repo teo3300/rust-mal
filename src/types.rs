@@ -29,6 +29,12 @@ pub enum MalType {
     Nil,
 }
 
+impl Default for &MalType {
+    fn default() -> Self {
+        &MalType::Nil
+    }
+}
+
 impl MalType {
     pub fn if_number(&self) -> Result<isize, MalErr> {
         match self {

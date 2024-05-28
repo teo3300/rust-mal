@@ -22,6 +22,10 @@ pub fn set_home_path(env: &Env) {
     .unwrap();
 }
 
+pub fn print_banner(env: &Env) {
+    let _ = eval_str("(prn BANNER)", env);
+}
+
 fn get_home_path(env: &Env) -> Result<String, MalErr> {
     Ok(eval_str("MAL_HOME", env)?.if_string()?.to_string())
 }
@@ -92,7 +96,7 @@ pub fn interactive(env: Env) {
             // // Read line to compose program input
             // let mut line = String::new();
             // io::stdin().read_line(&mut line).unwrap();
-            let line = rl.readline("; user> ");
+            let line = rl.readline("; mal> ");
 
             match line {
                 Ok(line) => {

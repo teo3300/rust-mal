@@ -103,7 +103,7 @@ pub fn call_func(func: &MalType, args: &[MalType]) -> CallRet {
                         eval(x, inner_env.clone())?;
                     }
                     Ok(CallFunc::MalFun(
-                        list.last().unwrap_or(&Nil).clone(),
+                        list.last().unwrap_or_default().clone(),
                         inner_env,
                     ))
                 }

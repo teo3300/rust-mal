@@ -46,9 +46,11 @@
     (= (count l) 0)))
 
 (def! assert-eq (fn* [a b]
+    "returns an error if arguments are not equals, NIL otherwise"
     (assert (= a b))))
 
 (def! assert-fail (fn* [x]
+    "returns NIL if evaluation of argument fails, error otherwise"
     (assert (not (ok? (eval x))))))
 
 ;; Since thread safety is not required, I will leave it like this,
@@ -58,13 +60,16 @@
 
 ;; File-interaction functions
 (def! load-file (fn* [f]
+    "open a mal file and evaluate its content"
     (eval (read-string (str "(do " (slurp f) "\nnil)")))))
 
 (def! conf-reload (fn* []
+    "reload mal config file"
     (load-file (str MAL_HOME "/" "config.mal"))))
 
 ;; Shorthand
 (def! quit (fn* []
+    "Quit the program with status '0'"
     (exit 0)))
 
 ;; variables
@@ -132,5 +137,3 @@
         "; (help <symbol>)      : print information about a symbol\n"
         ";\n"
         "; enjoy ^.^\n"))
-
-(println BANNER)

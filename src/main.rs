@@ -12,7 +12,7 @@ mod step6_file;
 mod types;
 
 use core::ns_init;
-use parse_tools::{interactive, load_file, load_home_file, set_home_path};
+use parse_tools::{interactive, load_file, load_home_file, print_banner, set_home_path};
 
 fn main() {
     // Initialize ns environment
@@ -32,6 +32,8 @@ fn main() {
             println!("{}", e.message())
         }
     });
+
+    print_banner(&reply_env);
 
     interactive(reply_env);
 }
