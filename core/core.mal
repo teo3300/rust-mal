@@ -51,6 +51,11 @@
 (def! assert-fail (fn* [x]
     (assert (not (ok? (eval x))))))
 
+;; Since thread safety is not required, I will leave it like this,
+;;   to make thread safe just guard the function
+(def! swap! (fn* [a f]
+    (reset! a (f @a))))
+
 ;; File-interaction functions
 (def! load-file (fn* [f]
     (eval (read-string (str "(do " (slurp f) "\nnil)")))))
