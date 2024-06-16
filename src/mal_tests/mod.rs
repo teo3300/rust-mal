@@ -60,4 +60,9 @@ mod functional {
     fn car_cdr() {
         test!("car-cdr")
     }
+
+    #[test]
+    fn map() {
+        test!("map")
+    }
 }

@@ -1,0 +1,5 @@
+; builtin map
+(assert-eq '((1) (2) (3)) (map list '(1 2 3)))
+
+; lambda map
+(assert-eq '(2 3 4) (map (fn* [x] (+ x 1)) '(1 2 3)))

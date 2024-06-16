@@ -189,6 +189,38 @@ pub fn car_cdr(list: &[MalType]) -> Result<(&MalType, &[MalType]), MalErr> {
     Ok((car(list)?, cdr(list)))
 }
 
+pub fn mal_map(args: &[MalType]) -> MalRet {
+    let mut ret = Vec::new();
+    let (lambda, list) = car_cdr(args)?;
+    let list = car(list)?.if_list()?;
+    match lambda {
+        M::Fun(func, _) => {
+            for el in list {
+                ret.push(func(&[el.clone()])?);
+            }
+        }
+        M::MalFun {
+            params, ast, env, ..
+        } => {
+            for el in list {
+                let inner_env = env_binds(env.clone(), params, &[el.clone()])?;
+                match ast.as_ref() {
+                    M::List(ops) => {
+                        let mut last = MalType::Nil;
+                        for x in &ops[0..ops.len()] {
+                            last = eval(x, inner_env.clone())?;
+                        }
+                        ret.push(last)
+                    }
+                    _ => scream!(),
+                }
+            }
+        }
+        _ => scream!(),
+    };
+    Ok(MalType::List(ret.into()))
+}
+
 fn first(list: &[MalType]) -> &[MalType] {
     if list.len() > 1 {
         &list[..list.len() - 1]
