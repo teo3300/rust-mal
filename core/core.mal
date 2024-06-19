@@ -161,11 +161,9 @@
     (def! filter-r (fn* [l p]
         (if (empty? l)
             p
-            (do
-                (def! t (car l))
-                (if (f t)
-                    (filter-r (cdr l) (cons t p))
-                    (filter-r (cdr l) p))))))
+            (if (f (def! t (car l)))
+                (filter-r (cdr l) (cons t p))
+                (filter-r (cdr l) p)))))
     (reverse (filter-r l '()))))
 
 (def! map-if (fn* [c f l]

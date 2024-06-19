@@ -13,10 +13,3 @@
         (let* [c (car n) n (cdr n)]
             (distribute-r (cons c p) n (cons (cons c (concat p n)) t))))))
     (distribute-r '() x '())))
-
-(def! len (fn* [l] (def! len-r (fn* [l c]
-    (if (empty? l)
-        c
-        (len-r (cdr l) (+ c 1)))))
-    (len-r l 0)))
-
