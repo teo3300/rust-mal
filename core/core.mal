@@ -36,6 +36,12 @@
     (>= b a)))
 
 ; Other functions in core.rs
+(def! int? (fn* [a]
+    (= (type a) :int)))
+
+(def! sym? (fn* [a]
+    (= (type a) :symbol)))
+
 (def! list? (fn* [a]
     (= (type a) :list)))
 
@@ -109,13 +115,11 @@
 (def! help (fn* [symbol] "==SPECIAL FORM=="
     "symbol: Sym"
     "display an helper f or the specified symbol"
-    "#alias: h"
     "#returns: NIL"))
 
 (def! find (fn* [substring...] "==SPECIAL FORM=="
     "print all the known symbols partially matching <substring> in"
     "the current environment"
-    "#alias f"
     "#returns: NIL"))
 
 (def! quote (fn* [statement] "==SPECIAL FORM=="
@@ -137,3 +141,33 @@
         "; (help <symbol>)      : print information about a symbol\n"
         ";\n"
         "; enjoy ^.^\n"))
+
+(def! reverse (fn* [x]
+    "Reverses order of elements in the arg"
+    (def! reverse-r (fn* [x t]
+        (if (empty? x)
+            t
+            (reverse-r (cdr x) (cons (car x) t)))))
+    (reverse-r x '())))
+
+(def! map (fn* [f l]
+    "Apply function f to all elements of l"
+    (def! l (reverse l))
+    (def! map-r (fn* [l p]
+        (if (empty? l)
+            p
+            (map-r (cdr l) (cons (f (car l)) p)))))
+    (map-r l '())))
+
+(def! filter (fn* [f l]
+    "Remove all elements that don't satisfy f"
+    (def! l (reverse l))
+    (def! filter-r (fn* [l p]
+        (if (empty? l)
+            p
+            (do
+                (def! t (car l))
+                (if (f t)
+                    (filter-r (cdr l) (cons (car l) p))
+                    (filter-r (cdr l) p))))))
+    (filter-r l '())))

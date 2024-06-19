@@ -65,4 +65,9 @@ mod functional {
     fn map() {
         test!("map")
     }
+
+    #[test]
+    fn fil() {
+        test!("fil")
+    }
 }

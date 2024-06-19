@@ -189,36 +189,18 @@ pub fn car_cdr(list: &[MalType]) -> Result<(&MalType, &[MalType]), MalErr> {
     Ok((car(list)?, cdr(list)))
 }
 
-pub fn mal_map(args: &[MalType]) -> MalRet {
-    let mut ret = Vec::new();
-    let (lambda, list) = car_cdr(args)?;
-    let list = car(list)?.if_list()?;
-    match lambda {
-        M::Fun(func, _) => {
-            for el in list {
-                ret.push(func(&[el.clone()])?);
-            }
+// TODO: fix these chonky functions
+
+pub fn mal_cons(args: &[MalType]) -> MalRet {
+    match args.len() {
+        2 => {
+            let mut car = vec![args[0].clone()];
+            let cdr = args[1].if_list()?;
+            car.extend_from_slice(cdr);
+            Ok(M::List(car.into()))
         }
-        M::MalFun {
-            params, ast, env, ..
-        } => {
-            for el in list {
-                let inner_env = env_binds(env.clone(), params, &[el.clone()])?;
-                match ast.as_ref() {
-                    M::List(ops) => {
-                        let mut last = MalType::Nil;
-                        for x in &ops[0..ops.len()] {
-                            last = eval(x, inner_env.clone())?;
-                        }
-                        ret.push(last)
-                    }
-                    _ => scream!(),
-                }
-            }
-        }
-        _ => scream!(),
-    };
-    Ok(MalType::List(ret.into()))
+        _ => Err(MalErr::unrecoverable("cons: requires 2 arguments")),
+    }
 }
 
 fn first(list: &[MalType]) -> &[MalType] {

@@ -1,8 +1,8 @@
 use std::{cell::RefCell, env, rc::Rc};
 
 use crate::env::{
-    any_zero, arithmetic_op, car, comparison_op, env_new, env_set, mal_car, mal_cdr, mal_exit,
-    mal_map, Env,
+    any_zero, arithmetic_op, car, comparison_op, env_new, env_set, mal_car, mal_cdr, mal_cons,
+    mal_exit, Env,
 };
 
 // This is the first time I implement a macro, and I'm copying it
@@ -81,7 +81,7 @@ pub fn ns_init() -> Env {
         "atom"          => Fun(|a| Ok(Atom(Rc::new(RefCell::new(car(a).unwrap_or_default().clone())))), "Return an atom pointing to the given arg"),
         "deref"         => Fun(|a| if_atom!(car(a)?), "Return the content of the atom argumet"),
         "reset!"        => Fun(reset_bang, "Change the value of the Atom (frist argument) to the second argument"),
-        "map"           => Fun(mal_map, "Apply the first argument to all the elements of the second arguments"),
+        "cons"          => Fun(mal_cons, "Push to front if second element is a list"),
         "env"           => Fun(|a| match env::var(car(a)?.if_string()?) {
             Ok(s) => Ok(Str(s.into())),
             _ => Ok(Nil),
