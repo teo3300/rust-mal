@@ -126,13 +126,6 @@ pub fn mal_equals(args: &[MalType]) -> MalRet {
     }))
 }
 
-pub fn mal_assert(args: &[MalType]) -> MalRet {
-    if args.iter().any(|i| matches!(i, M::Nil | M::Bool(false))) {
-        return Err(MalErr::unrecoverable("Assertion failed"));
-    }
-    Ok(M::Nil)
-}
-
 pub fn reset_bang(args: &[MalType]) -> MalRet {
     if args.len() < 2 {
         return Err(MalErr::unrecoverable("reset requires two arguments"));
@@ -241,16 +234,6 @@ pub fn unescape_str(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::mal_assert;
-    use crate::types::MalType as M;
-
-    #[test]
-    fn _mal_assert() {
-        assert!(matches!(mal_assert(&[M::Nil]), Err(_)));
-        assert!(matches!(mal_assert(&[M::Bool(false)]), Err(_)));
-        assert!(matches!(mal_assert(&[M::Bool(true)]), Ok(_)));
-        assert!(matches!(mal_assert(&[M::Int(1)]), Ok(_)));
-    }
 
     #[test]
     fn _escape_str() {

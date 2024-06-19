@@ -18,14 +18,6 @@
         b)))
 
 ; Arithmetic
-(def! abs (fn* [a]
-    (if (> a 0)
-        a
-        (- 0 a))))
-
-(def! mod (fn* [a b]
-    (- a (* (/ a b) b))))
-
 (def! > (fn* [a b]
     (< b a)))
 
@@ -51,13 +43,19 @@
 (def! empty? (fn* [l]
     (= (count l) 0)))
 
+(def! assert-msg (fn* [e m]
+    (if (not e)
+        (raise m))))
+
+(def! assert (fn* [e] (assert-msg e "Assertion failed")))
+
 (def! assert-eq (fn* [a b]
     "returns an error if arguments are not equals, NIL otherwise"
-    (assert (= a b))))
+    (assert-msg (= a b) (str "Expected " b (type b) ", found " a (type a)))))
 
 (def! assert-fail (fn* [x]
     "returns NIL if evaluation of argument fails, error otherwise"
-    (assert (not (ok? (eval x))))))
+    (assert-msg (not (ok? (eval x))) (str "Expected failure, but " x " is correct"))))
 
 ;; Since thread safety is not required, I will leave it like this,
 ;;   to make thread safe just guard the function
@@ -152,22 +150,35 @@
 
 (def! map (fn* [f l]
     "Apply function f to all elements of l"
-    (def! l (reverse l))
     (def! map-r (fn* [l p]
         (if (empty? l)
             p
             (map-r (cdr l) (cons (f (car l)) p)))))
-    (map-r l '())))
+    (reverse (map-r l '()))))
 
 (def! filter (fn* [f l]
-    "Remove all elements that don't satisfy f"
-    (def! l (reverse l))
+    "Remove all elements of l that don't satisfy f"
     (def! filter-r (fn* [l p]
         (if (empty? l)
             p
             (do
                 (def! t (car l))
                 (if (f t)
-                    (filter-r (cdr l) (cons (car l) p))
+                    (filter-r (cdr l) (cons t p))
                     (filter-r (cdr l) p))))))
-    (filter-r l '())))
+    (reverse (filter-r l '()))))
+
+(def! map-if (fn* [c f l]
+    "Apply function f to all elements of l that satisfy c"
+    (map (fn* [x] (if (c x) (f x) x)) l)))
+
+(def! collect (fn* [f i l]
+    "Apply collector function f to list l"
+    "Collector function must accept two parameters:"
+    "collector and current element, result is the collector in the next iteration"
+    "Collector is initialized as i"
+    (def! collect-r (fn* [c l]
+        (if (empty? l)
+            c
+            (collect-r (f c (car l)) (cdr l)))))
+    (collect-r i l)))

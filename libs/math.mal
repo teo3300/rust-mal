@@ -1,0 +1,23 @@
+(def! abs (fn* [a]
+    (if (> a 0)
+        a
+        (- 0 a))))
+
+(def! mod (fn* [a b]
+    (- a (* (/ a b) b))))
+
+(def! max (fn* [a b]
+    (if (> a b)
+        a
+        b)))
+
+(def! min (fn* [a b]
+    (if (< a b)
+        a
+        b)))
+
+(def! fact (fn* [a]
+    (def! fact-r (fn* [a b]
+        (if (not (> a 1)) b
+            (fact-r (- a 1) (* a b)))))
+    (fact-r a 1)))

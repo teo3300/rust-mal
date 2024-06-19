@@ -42,7 +42,7 @@
 (assert-fail '(if))
 
 ; let*
-(assert (let* [let-a 1
+(assert-eq (let* [let-a 1
                let-b 2]
     (assert-eq let-a 1)
     (assert-eq let-b 2)
