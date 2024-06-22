@@ -1,5 +1,9 @@
 ;; Previously in core.rs
 ; Logic
+
+; Identity function
+(def! I (fn* [x] x))
+
 (def! not (fn* [x]
     (if x nil true)))
 

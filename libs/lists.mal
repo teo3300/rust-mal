@@ -1,3 +1,7 @@
+(def! map-nil (fn* [v l]
+    "Map nil values of l to the specified value"
+    (map-if v nil l)))
+
 (def! concat (fn* [x y] (def! concat-r (fn* [x y t]
     "Concatenate arguments, keeping their order"
     (if (car x)

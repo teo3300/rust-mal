@@ -110,6 +110,32 @@ pub fn call_func(func: &MalType, args: &[MalType]) -> CallRet {
                 _ => scream!(),
             }
         }
+        M::Map(m) => {
+            if args.is_empty() {
+                return Err(MalErr::unrecoverable("No key provided to Map construct"));
+            }
+            match &args[0] {
+                M::Str(s) | M::Key(s) => {
+                    Ok(CallFunc::Builtin(m.get(s).unwrap_or_default().clone()))
+                }
+                _ => Err(MalErr::unrecoverable("Map argument must be string or key")),
+            }
+        }
+        M::Vector(v) => {
+            if args.is_empty() {
+                return Err(MalErr::unrecoverable("No key provided to Vector construct"));
+            }
+            match &args[0] {
+                M::Int(i) => {
+                    if { 0..v.len() as isize }.contains(i) {
+                        Ok(CallFunc::Builtin(v[*i as usize].clone()))
+                    } else {
+                        Ok(CallFunc::Builtin(M::Nil))
+                    }
+                }
+                _ => Err(MalErr::unrecoverable("Map argument must be string or key")),
+            }
+        }
         _ => Err(MalErr::unrecoverable(
             format!("{:?} is not a function", prt(func)).as_str(),
         )),

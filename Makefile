@@ -12,6 +12,6 @@ conf:
 	mkdir -p ${HOME}/.config/mal/libs
 	cp -f libs/* ${HOME}/.config/mal/libs/
 
-install: build-release conf
+install: build-release test conf
 	sudo cp target/release/rust-mal /usr/local/bin/mal
 	sudo chown ${USER} /usr/local/bin/mal
