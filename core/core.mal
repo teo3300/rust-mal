@@ -139,6 +139,8 @@
 (def! BANNER
     (str 
         "; rust-mal: a toy lisp interpreter written in rust\n"
+        "; $ mal [filename ...] : load specified modules at start\n"
+        "; (load-file <name>)   : load specified module while mal is running\n"
         "; (find [pattern...])  : list symbols matching all patterns\n"
         "; (help <symbol>)      : print information about a symbol\n"
         ";\n"

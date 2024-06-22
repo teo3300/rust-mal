@@ -23,6 +23,7 @@ pub enum MalType {
     Sym(MalStr),
     Key(MalStr),
     Str(MalStr),
+    Ch(char),
     Int(isize),
     Bool(bool),
     Atom(Rc<RefCell<MalType>>),
@@ -95,6 +96,7 @@ impl MalType {
                 M::Vector(_) => "vector",
                 M::Map(_) => "map",
                 M::Atom(_) => "atom",
+                M::Ch(_) => "char",
             })
         .into())
     }
@@ -108,6 +110,7 @@ fn mal_compare(args: (&MalType, &MalType)) -> bool {
         (M::Nil, M::Nil) => true,
         (M::Bool(a), M::Bool(b)) => a == b,
         (M::Int(a), M::Int(b)) => a == b,
+        (M::Ch(a), M::Ch(b)) => a == b,
         (M::Key(a), M::Key(b)) | (M::Str(a), M::Str(b)) | (M::Sym(a), M::Sym(b)) => a == b,
         (M::List(a), M::List(b)) | (M::Vector(a), M::Vector(b)) => {
             a.len() == b.len() && a.iter().zip(b.iter()).all(mal_compare)

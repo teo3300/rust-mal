@@ -1,8 +1,8 @@
 use std::{cell::RefCell, env, rc::Rc};
 
 use crate::env::{
-    any_zero, arithmetic_op, car, comparison_op, env_new, env_set, mal_car, mal_cdr, mal_cons,
-    mal_exit, Env,
+    any_zero, arithmetic_op, car, comparison_op, env_new, env_set, mal_boom, mal_car, mal_cdr,
+    mal_cons, mal_exit, Env,
 };
 
 // This is the first time I implement a macro, and I'm copying it
@@ -75,6 +75,8 @@ pub fn ns_init() -> Env {
         "="             => Fun(mal_equals, "Return true if the first two parameters are the same type and content, in case of lists propagate to all elements (NOT IMPLEMENTED for 'Map', 'Fun' and 'MalFun')"),
         "car"           => Fun(|a| mal_car(car(a)?), "Returns the first element of the list, NIL if its empty"),
         "cdr"           => Fun(|a| mal_cdr(car(a)?), "Returns all the list but the first element"),
+        // A tribute to PHP's explode (PHP, a language I never used)
+        "boom"          => Fun(mal_boom, "Split a string into a list of string\n; BE CAREFUL WHEN USING"),
         "read-string"   => Fun(|a| read_str(Reader::new().push(car(a)?.if_string()?)).map_err(MalErr::severe), "Tokenize and read the first argument"),
         "slurp"         => Fun(|a| Ok(Str(read_file(car(a)?.if_string()?)?)), "Read a file and return the content as a string"),
         "atom"          => Fun(|a| Ok(Atom(Rc::new(RefCell::new(car(a).unwrap_or_default().clone())))), "Return an atom pointing to the given arg"),

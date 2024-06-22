@@ -54,6 +54,13 @@ pub fn pr_str(ast: &MalType, print_readably: bool) -> String {
         M::Fun(..) => "#<builtin>".to_string(),
         M::MalFun { .. } => "#<function>".to_string(),
         M::Atom(sub) => format!("Atom({})", pr_str(&sub.borrow(), print_readably)),
+        M::Ch(c) => {
+            if print_readably {
+                format!("#\\{}", c)
+            } else {
+                c.to_string()
+            }
+        }
     }
 }
 

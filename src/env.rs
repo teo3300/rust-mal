@@ -257,3 +257,9 @@ pub fn mal_exit(list: &[MalType]) -> MalRet {
         _ => exit(-1),
     }
 }
+
+// TODO: find another way to process strings
+pub fn mal_boom(args: &[MalType]) -> MalRet {
+    let string = car(args)?.if_string()?;
+    Ok(M::List(string.chars().map(M::Ch).collect()))
+}
