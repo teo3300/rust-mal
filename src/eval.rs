@@ -4,7 +4,27 @@ use crate::env::{first_last, Env};
 use crate::printer::prt;
 use crate::types::MalType as M;
 use crate::types::{MalArgs, MalErr, MalMap, MalRet, MalType};
+use std::borrow::Borrow;
 use std::rc::Rc;
+
+macro_rules! forms {
+    ($($name:ident : $value:expr),*) => {
+        $(
+            const $name: &'static str = $value;
+        )*
+    };
+}
+forms!(NAME_DEF     : "def!",
+       NAME_LET     : "let*",
+       NAME_DO      : "do",
+       NAME_IF      : "if",
+       NAME_FN      : "fn*",
+       NAME_FN_ALT  : "λ", 
+       NAME_HELP    : "help",
+       NAME_FIND    : "find",
+       NAME_QUOTE   : "quote",
+       NAME_OK      : "ok?",
+       NAME_EVAL    : "eval");
 
 /// Resolve the first element of the list as the function name and call it
 /// with the other elements as arguments
@@ -42,7 +62,9 @@ fn def_bang_form(list: &[MalType], env: Env) -> MalRet {
     }
     let (car, _) = car_cdr(list)?;
     let sym = car.if_symbol()?;
-    Ok(env_set(&env, sym, &eval(&list[1], env.clone())?))
+    let val = &eval(&list[1], env.clone())?;
+    env_set(&env, sym, val);
+    Ok(val.clone())
 }
 
 /// let* special form:
@@ -96,7 +118,7 @@ fn fn_star_form(list: &[MalType], env: Env) -> MalRet {
     Ok(M::MalFun {
         // eval: eval_ast,
         params: Rc::new(binds.clone()),
-        ast: Rc::new(M::List(MalArgs::new(exprs.to_vec()))),
+        ast: Rc::new(M::List(exprs.into())),
         env,
     })
 }
@@ -132,6 +154,21 @@ pub fn outermost(env: &Env) -> Env {
     env.clone()
 }
 
+macro_rules! apply {
+    ($ast:expr, $env:expr) => {{
+        let apply_list = &eval_ast(&$ast, $env.clone())?;
+        let eval_ret = eval_func(apply_list)?;
+
+        match eval_ret {
+            CallFunc::Builtin(ret) => return Ok(ret),
+            CallFunc::MalFun(fun_ast, fun_env) => {
+                $ast = fun_ast;
+                $env = fun_env;
+            }
+        }
+    }};
+}
+
 /// Intermediate function to discern special forms from defined symbols
 pub fn eval(ast: &MalType, env: Env) -> MalRet {
     let mut ast = ast.clone();
@@ -141,60 +178,44 @@ pub fn eval(ast: &MalType, env: Env) -> MalRet {
             M::List(list) if list.is_empty() => return Ok(ast.clone()),
             M::List(list) => {
                 let (symbol, args) = car_cdr(list)?;
-                match symbol {
-                    M::Sym(sym) if sym == "def!" => return def_bang_form(args, env.clone()), // Set for env
-                    M::Sym(sym) if sym == "let*" => (ast, env) = let_star_form(args, env.clone())?,
-                    M::Sym(sym) if sym == "do" => ast = do_form(args, env.clone())?,
-                    M::Sym(sym) if sym == "if" => ast = if_form(args, env.clone())?,
-                    M::Sym(sym) if sym == "fn*" => return fn_star_form(args, env.clone()),
-                    M::Sym(sym) if sym == "help" => return help_form(args, env.clone()),
-                    M::Sym(sym) if sym == "find" => return find_form(args, env.clone()),
-                    // Oh God, what have I done
-                    M::Sym(sym) if sym == "quote" => return Ok(car(args)?.clone()),
-                    M::Sym(sym) if sym == "ok?" => {
-                        return match eval(car(args)?, env.clone()) {
-                            Err(_) => Ok(M::Nil),
-                            _ => Ok(M::Bool(true)),
+                if let M::Sym(sym) = symbol {
+                    match sym.borrow() {
+                        // I don't like to borrow tho
+                        NAME_DEF => return def_bang_form(args, env.clone()), // Set for env
+                        NAME_LET => {(ast, env) = let_star_form(args, env.clone())?; continue;},
+                        NAME_DO  => {ast = do_form(args, env.clone())?; continue;},
+                        NAME_IF  => {ast = if_form(args, env.clone())?; continue;},
+                        NAME_FN | NAME_FN_ALT /* :) */ => {
+                            return fn_star_form(args, env.clone())
                         }
-                    }
-                    // Special form, sad
-                    // Bruh, is basically double eval
-                    M::Sym(sym) if sym == "eval" => {
-                        ast = eval(env::car(args)?, env.clone())?;
-                        // Climb to the outermost environment (The repl env)
-                        env = outermost(&env);
-                    }
-                    // Filter out special forms
-                    // "apply"/invoke
-                    _ => {
-                        let apply_list = &eval_ast(&ast, env.clone())?;
-                        let eval_ret = eval_func(apply_list)?;
-
-                        match eval_ret {
-                            CallFunc::Builtin(ret) => return Ok(ret),
-                            CallFunc::MalFun(fun_ast, fun_env) => {
-                                ast = fun_ast;
-                                env = fun_env;
+                        NAME_HELP => return help_form(args, env.clone()),
+                        NAME_FIND => return find_form(args, env.clone()),
+                        // Oh God, what have I done
+                        NAME_QUOTE => return Ok(car(args)?.clone()),
+                        NAME_OK => {
+                            return match eval(car(args)?, env.clone()) {
+                                Err(_) => Ok(M::Nil),
+                                _ => Ok(M::Bool(true)),
                             }
                         }
+                        // Special form, sad
+                        // Bruh, is basically double eval
+                        NAME_EVAL => {
+                            ast = eval(env::car(args)?, env.clone())?;
+                            // Climb to the outermost environment (The repl env)
+                            env = outermost(&env);
+                            continue;
+                        }
+                        _ => {}
                     }
-                };
+                }
+                // "apply"/invoke
+                apply!(ast, env)
             }
             _ => return eval_ast(&ast, env),
         }
     }
 }
-
-/// Switch ast evaluation depending on it being a list or not and return the
-/// result of the evaluation, this function calls "eval_ast" to recursively
-/// evaluate asts
-/*pub fn eval(ast: &MalType, env: Env) -> MalRet {
-    match &ast {
-        M::List(list) if list.is_empty() => Ok(ast.clone()),
-        M::List(list) if !list.is_empty() => apply(list, env),
-        _ => eval_ast(ast, env),
-    }
-}*/
 
 /// Separately evaluate all elements in a collection (list or vector)
 fn eval_collection(list: &MalArgs, env: Env) -> Result<MalArgs, MalErr> {
@@ -202,14 +223,14 @@ fn eval_collection(list: &MalArgs, env: Env) -> Result<MalArgs, MalErr> {
     for el in list.as_ref() {
         ret.push(eval(el, env.clone())?);
     }
-    Ok(MalArgs::new(ret))
+    Ok(ret.into())
 }
 
 /// Evaluate the values of a map
 fn eval_map(map: &MalMap, env: Env) -> MalRet {
     let mut ret = MalMap::new();
     for (k, v) in map {
-        ret.insert(k.to_string(), eval(v, env.clone())?);
+        ret.insert(k.clone(), eval(v, env.clone())?);
     }
     Ok(M::Map(ret))
 }
@@ -225,248 +246,4 @@ fn eval_ast(ast: &MalType, env: Env) -> MalRet {
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Tests                                                                      //
-////////////////////////////////////////////////////////////////////////////////
-
-#[cfg(test)]
-mod tests {
-
-    use crate::env::Env;
-
-    macro_rules! load2 {
-        ($input:expr) => {{
-            use crate::reader::{read_str, Reader};
-
-            let r = Reader::new();
-            r.push($input);
-            &match read_str(&r) {
-                Ok(v) => match v {
-                    MalType::List(v) => v,
-                    _ => panic!("Not a list"),
-                },
-                _ => panic!("Bad command"),
-            }
-        }};
-    }
-
-    macro_rules! load {
-        ($input:expr) => {{
-            use crate::env::cdr;
-            cdr(load2!($input))
-        }};
-    }
-
-    /*macro_rules! load_f {
-        ($input:expr, $env:expr) => {{
-            use crate::reader::{read_str, Reader};
-            use std::rc::Rc;
-
-            let r = Reader::new();
-            r.push($input);
-            let args = match read_str(&r) {
-                Ok(v) => match v {
-                    MalType::List(v) => v,
-                    _ => panic!("Bad command"),
-                },
-                _ => panic!("Bad command"),
-            };
-            &MalType::List(Rc::new(if args.is_empty() {
-                Vec::new()
-            } else {
-                let f_str = match &args[0] {
-                    MalType::Sym(s) => s.as_str(),
-                    _ => panic!("Can't solve function"),
-                };
-                let f = match env_get(&$env.clone(), f_str) {
-                    Ok(v) => v,
-                    _ => panic!("No such function in env"),
-                };
-                [&[f], &args[1..]].concat()
-            }))
-        }};
-    }*/
-
-    fn _env_empty() -> Env {
-        use crate::env::env_new;
-        env_new(None)
-    }
-
-    mod forms {
-        use crate::env::env_get;
-        use crate::eval::tests::_env_empty;
-        use crate::eval::{def_bang_form, fn_star_form, if_form, let_star_form};
-        use crate::types::MalType;
-
-        #[test]
-        fn def_bang() {
-            let env = _env_empty();
-
-            assert!(matches!(   //x empty
-                def_bang_form(
-                    load!("(def!) ; empty"), 
-                    env.clone()),
-                Err(e)
-                if !e.is_recoverable()));
-            assert!(matches!(   //x 1 arg
-                def_bang_form(
-                    load!("(def! a) ; 1 arg"), 
-                    env.clone()),
-                Err(e)
-                if !e.is_recoverable()));
-            assert!(matches!(   //x 3 args
-                def_bang_form(
-                    load!("(def! a 1 2) ; 3 args"), 
-                    env.clone()),
-                Err(e)
-                if !e.is_recoverable()));
-
-            assert!(matches!(
-                //v 2 args
-                def_bang_form(load!("(def! a 1) ; correct a = 1"), env.clone()),
-                Ok(MalType::Int(1))
-            ));
-            assert!(matches!(env_get(&env, "a"), Ok(MalType::Int(1))));
-        }
-
-        #[test]
-        fn let_star() {
-            let env = _env_empty();
-            assert!(
-                matches!(let_star_form(load!("(let*)"), env.clone()), Err(e) if !e.is_recoverable())
-            );
-            assert!(
-                matches!(let_star_form(load!("(let* 1)"), env.clone()), Err(e) if !e.is_recoverable())
-            );
-            assert!(
-                matches!(let_star_form(load!("(let* [a])"), env.clone()), Err(e) if !e.is_recoverable())
-            ); /*
-               assert!(matches!(
-                   let_star_form(load!("(let* ())"), env.clone()),
-                   Ok(MalType::Nil)
-               ));
-               assert!(matches!(
-                   let_star_form(load!("(let* (a 1))"), env.clone()),
-                   Ok(MalType::Nil)
-               ));
-               assert!(matches!(env_get(&env.clone(), "a"), Err(e) if !e.is_recoverable()));
-               assert!(matches!(
-                   let_star_form(load!("(let* (a 1 b 2) a b)"), env.clone()),
-                   Ok(MalType::Int(2))
-               ));
-               assert!(matches!(env_get(&env.clone(), "a"), Err(e) if !e.is_recoverable()));
-               assert!(matches!(env_get(&env.clone(), "b"), Err(e) if !e.is_recoverable()));
-               assert!(matches!(
-                   let_star_form(load!("(let* (a 1 b 2) (def! c 1) a b)"), env.clone()),
-                   Ok(MalType::Int(2))
-               ));*/
-            assert!(matches!(env_get(&env.clone(), "c"), Err(e) if !e.is_recoverable()));
-        }
-
-        /*#[test]
-        fn _do_form() {
-            let env = _env_empty();
-            assert!(matches!(
-                do_form(load!("(do)"), env.clone()),
-                Ok(MalType::Nil)
-            ));
-            assert!(matches!(
-                do_form(load!("(do true)"), env.clone()),
-                Ok(MalType::Bool(true))
-            ));
-            assert!(matches!(
-                do_form(load!("(do (def! a 1) 2)"), env.clone()),
-                Ok(MalType::Int(2))
-            ));
-            assert!(matches!(env_get(&env.clone(), "a"), Ok(MalType::Int(1))));
-        }*/
-
-        #[test]
-        fn _if_form() {
-            let env = _env_empty();
-            assert!(matches!(
-                if_form(load!("(if)"), env.clone()),
-                Err(e) if !e.is_recoverable()));
-            assert!(matches!(
-                if_form(load!("(if 1)"), env.clone()),
-                Err(e) if !e.is_recoverable()));
-            assert!(matches!(
-                if_form(load!("(if 1 2 3 4)"), env.clone()),
-                Err(e) if !e.is_recoverable()));
-            assert!(matches!(
-                if_form(load!("(if nil 1)"), env.clone()),
-                Ok(MalType::Nil)
-            ));
-            assert!(matches!(
-                if_form(load!("(if nil 1 2)"), env.clone()),
-                Ok(MalType::Int(2))
-            ));
-            assert!(matches!(
-                if_form(load!("(if true 1)"), env.clone()),
-                Ok(MalType::Int(1))
-            ));
-            assert!(matches!(
-                if_form(load!("(if true 1 2)"), env.clone()),
-                Ok(MalType::Int(1))
-            ));
-        }
-
-        #[test]
-        fn fn_star() {
-            let env = _env_empty();
-            assert!(matches!(
-                fn_star_form(load!("(fn* [a b] 1 2)"), env.clone()),
-                Ok(MalType::MalFun {params, ast, .. })
-                if matches!((*params).clone(), MalType::Vector(v)
-                    if matches!(&v[0], MalType::Sym(v) if v == "a")
-                    && matches!(&v[1], MalType::Sym(v) if v == "b")
-                && matches!((*ast).clone(), MalType::List(v)
-                    if matches!(&v[0], MalType::Int(1))
-                    && matches!(&v[1], MalType::Int(2))))));
-            // We trust the fact that the env does not do silly stuff
-            assert!(matches!(
-                fn_star_form(load!("(fn*)"), env.clone()),
-                Err(e) if !e.is_recoverable()));
-            assert!(matches!(
-                fn_star_form(load!("(fn* 1)"), env.clone()),
-                Err(e) if !e.is_recoverable()));
-        }
-
-        /*
-        #[test]
-        fn _eval_func() {
-            let env = _env_empty();
-            assert!(matches!(
-                def_bang_form(load!("(def! or (fn* (a b) (if a a b)))"), env.clone()),
-                Ok(_)
-            ));
-            assert!(matches!(
-                eval_func(&MalType::Int(1)),
-                Err(e) if !e.is_recoverable()));
-            assert!(matches!(
-                eval_func(load_f!("()", env.clone())),
-                Err(e) if !e.is_recoverable()));
-            assert!(matches!(
-                eval_func(load_f!("(or nil nil)", env.clone())),
-                Ok(v) if matches!(v, MalType::Nil)));
-            assert!(matches!(
-                eval_func(load_f!("(or 1 nil)", env.clone())),
-                Ok(MalType::Int(1))
-            ));
-            assert!(matches!(
-                eval_func(load_f!("(or nil 1)", env.clone())),
-                Ok(MalType::Int(1))
-            ));
-        }*/
-
-        /*#[test]
-        fn _apply() {
-            let env = _env_empty();
-            assert!(matches!(
-                apply(load2!("(def! a 1)"), env.clone()),
-                Ok(MalType::Int(1))
-            ));
-            assert!(matches!(env_get(&env, "a"), Ok(MalType::Int(1))));
-        }*/
-    }
-}
+// all tests moved to mal

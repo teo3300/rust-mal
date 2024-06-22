@@ -1,0 +1,19 @@
+(def! map-nil (fn* [v l]
+    "Map nil values of l to the specified value"
+    (map-if v nil l)))
+
+(def! concat (fn* [x y] (def! concat-r (fn* [x y t]
+    "Concatenate arguments, keeping their order"
+    (if (car x)
+        (concat-r (cdr x) y (cons (car x) t))
+        (if (car y)
+            (concat-r '() (cdr y) (cons (car y) t))
+            t))))
+    (concat-r (reverse y) (reverse x) '())))
+
+(def! distribute (fn* [x] (def! distribute-r (fn* [p n t]
+    (if (empty? n)
+        t
+        (let* [c (car n) n (cdr n)]
+            (distribute-r (cons c p) n (cons (cons c (concat p n)) t))))))
+    (distribute-r '() x '())))

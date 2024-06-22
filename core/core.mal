@@ -1,21 +1,25 @@
 ;; Previously in core.rs
 ; Logic
+
+; Identity function
+(def! I (fn* [x] x))
+
 (def! not (fn* [x]
     (if x nil true)))
 
 (def! and (fn* [a b]
     (if a
-        (if b true))))
+        b)))
 
 (def! or (fn* [a b]
     (if a
-        true
-        (if b true))))
+        a
+        b)))
 
 (def! xor (fn* [a b]
     (if a
         (not b)
-        (if b true))))
+        b)))
 
 ; Arithmetic
 (def! > (fn* [a b]
@@ -27,57 +31,158 @@
 (def! <= (fn* [a b]
     (>= b a)))
 
-(def! + (fn* [a b]
-    (- a (- 0 b))))
-
-(def! abs (fn* [a]
-    (if (> a 0)
-        a
-        (- 0 a))))
-
-(def! sign-product (fn* [op a b acc]
-    (let* [res (op (abs a) (abs b) acc)]
-        (if (xor (< 0 a) (< 0 b))
-            (- 0 res)
-            res))))
-
-(def! * (fn* [a b]
-    "Recursive product based on sum"
-    (sign-product *-rec a b 0)))
-
-(def! *-rec (fn* [a b acc]
-    (if (= b 0)
-        acc
-        (*-rec a (- b 1) (+ acc a)))))
-
-(def! / (fn* [a b]
-    "recursive division based on subtraction"
-    (if (= b 0)
-        (raise "Attempting division by 0")
-        (sign-product /-rec a b 0))))
-
-(def! /-rec (fn* [a b acc]
-    (if (>= (- a b) 0)
-        (/-rec (- a b) b (+ acc 1))
-        acc)))
-
-(def! mod (fn* [a b]
-    (- a (* (/ a b) b))))
-
 ; Other functions in core.rs
-(def! assert-eq (fn* [a b]
-    (assert (= a b))))
+(def! int? (fn* [a]
+    (= (type a) :int)))
+
+(def! sym? (fn* [a]
+    (= (type a) :symbol)))
+
+(def! list? (fn* [a]
+    (= (type a) :list)))
+
+(def! atom? (fn* [a]
+    (= (type a) :atom)))
 
 (def! empty? (fn* [l]
     (= (count l) 0)))
 
+(def! assert-msg (fn* [e m]
+    (if (not e)
+        (raise m))))
+
+(def! assert (fn* [e] (assert-msg e "Assertion failed")))
+
+(def! assert-eq (fn* [a b]
+    "returns an error if arguments are not equals, NIL otherwise"
+    (assert-msg (= a b) (str "Expected " b (type b) ", found " a (type a)))))
+
+(def! assert-fail (fn* [x]
+    "returns NIL if evaluation of argument fails, error otherwise"
+    (assert-msg (not (ok? (eval x))) (str "Expected failure, but " x " is correct"))))
+
+;; Since thread safety is not required, I will leave it like this,
+;;   to make thread safe just guard the function
+(def! swap! (fn* [a f]
+    (reset! a (f @a))))
+
 ;; File-interaction functions
 (def! load-file (fn* [f]
+    "open a mal file and evaluate its content"
     (eval (read-string (str "(do " (slurp f) "\nnil)")))))
 
 (def! conf-reload (fn* []
+    "reload mal config file"
     (load-file (str MAL_HOME "/" "config.mal"))))
 
 ;; Shorthand
 (def! quit (fn* []
+    "Quit the program with status '0'"
     (exit 0)))
+
+;; variables
+(def! MAL_HISTORY (str MAL_HOME "/" ".mal-history"))
+
+;; helper functions
+;   these functions are never called, their symbols should always resolve
+;   in a special form, they are here only to provide informations through
+;   the "find" and "help" functions
+(def! def! (fn* [symbol value] "==SPECIAL FORM=="
+    "<symbol>: Sym"
+    "assign <value> to <symbol> in the current environment"
+    "#returns: <value>"))
+
+(def! let* (fn* [binding statement...] "==SPECIAL FORM=="
+    "<bindings>: Vec"
+    "create a new environment and assign values to symbols according"
+    "to the <binding> vector then evaluate each <statement>"
+    "#returns: result of the last evaluation"))
+
+(def! do (fn* [statement...] "==SPECIAL FORM=="
+    "evaluate each <statement> in the current environment"
+    "#returns: result of the last evalutaion"))
+
+(def! if (fn* [condition if-true if-false] "==SPECIAL FORM=="
+    "first evaluate <condition>, based on the result of evaluation"
+    "evaluates one of the two conditional branches, a missing branch"
+    "evaluates to NIL"
+    "#returns: result of the last evaluation"))
+
+(def! fn* (fn* [arguments statement...] "==SPECIAL FORM=="
+    "arguments: Vec"
+    "#alias: λ"                                             ; >:3
+    "#returns: new lambda that accepts <arguments>, evaluates each"
+    "        : <statement> and returns the last evaluation's result"))
+
+(def! help (fn* [symbol] "==SPECIAL FORM=="
+    "symbol: Sym"
+    "display an helper f or the specified symbol"
+    "#returns: NIL"))
+
+(def! find (fn* [substring...] "==SPECIAL FORM=="
+    "print all the known symbols partially matching <substring> in"
+    "the current environment"
+    "#returns: NIL"))
+
+(def! quote (fn* [statement] "==SPECIAL FORM=="
+    "prevents <statement> from being evaluated, it's possible to use"
+    "the ' symbol: 'sym is equivalent to (quote sym)"))
+
+(def! ok? (fn* [statement] "==SPECIAL FORM=="
+    "evaluate <statement>"
+    "#returns: true if  evaluation succeeds, NIL otherwise"))
+
+(def! eval (fn* [statement] "==SPECIAL FORM=="
+    "evaluate <statement>"
+    "#returns: the result of the evaluation"))
+
+(def! BANNER
+    (str 
+        "; rust-mal: a toy lisp interpreter written in rust\n"
+        "; $ mal [filename ...] : load specified modules at start\n"
+        "; (load-file <name>)   : load specified module while mal is running\n"
+        "; (find [pattern...])  : list symbols matching all patterns\n"
+        "; (help <symbol>)      : print information about a symbol\n"
+        ";\n"
+        "; enjoy ^.^\n"))
+
+(def! reverse (fn* [x]
+    "Reverses order of elements in the arg"
+    (def! reverse-r (fn* [x t]
+        (if (empty? x)
+            t
+            (reverse-r (cdr x) (cons (car x) t)))))
+    (reverse-r x '())))
+
+(def! map (fn* [f l]
+    "Apply function f to all elements of l"
+    (def! map-r (fn* [l p]
+        (if (empty? l)
+            p
+            (map-r (cdr l) (cons (f (car l)) p)))))
+    (reverse (map-r l '()))))
+
+(def! filter (fn* [f l]
+    "Remove all elements of l that don't satisfy f"
+    (def! filter-r (fn* [l p]
+        (if (empty? l)
+            p
+            (if (f (def! t (car l)))
+                (filter-r (cdr l) (cons t p))
+                (filter-r (cdr l) p)))))
+    (reverse (filter-r l '()))))
+
+(def! map-if (fn* [c f l]
+    "Apply function f to all elements of l that satisfy c"
+    (map (fn* [x] (if (c x) (f x) x)) l)))
+
+(def! collect (fn* [f i l]
+    "Apply collector function f to list l"
+    "Collector function must accept two parameters:"
+    "collector and current element, result is the collector in the next iteration"
+    "Collector is initialized as i"
+    (def! collect-r (fn* [c l]
+        (if (empty? l)
+            c
+            (collect-r (f c (car l)) (cdr l)))))
+    (collect-r i l)))

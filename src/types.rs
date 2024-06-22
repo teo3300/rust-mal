@@ -1,5 +1,10 @@
-use crate::env::{bin_unpack, Env};
-use std::{collections::HashMap, rc::Rc};
+use crate::env::{car_cdr, Env};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
+
+pub type MalStr = Rc<str>;
+pub type MalArgs = Rc<[MalType]>;
+pub type MalMap = HashMap<MalStr, MalType>;
+pub type MalRet = Result<MalType, MalErr>;
 
 // All Mal types should inherit from this
 #[derive(Clone)]
@@ -15,12 +20,20 @@ pub enum MalType {
         env: Env,
     }, // Used for functions defined within mal
     // Use Rc so I can now clone like there's no tomorrow
-    Sym(String),
-    Key(String),
-    Str(String),
+    Sym(MalStr),
+    Key(MalStr),
+    Str(MalStr),
+    Ch(char),
     Int(isize),
     Bool(bool),
+    Atom(Rc<RefCell<MalType>>),
     Nil,
+}
+
+impl Default for &MalType {
+    fn default() -> Self {
+        &MalType::Nil
+    }
 }
 
 impl MalType {
@@ -68,36 +81,68 @@ impl MalType {
             )),
         }
     }
+
+    pub fn label_type(&self) -> MalType {
+        Key(("ʞ:".to_owned()
+            + match self {
+                M::Nil => "nil",
+                M::Bool(_) => "bool",
+                M::Int(_) => "int",
+                M::Fun(_, _) | M::MalFun { .. } => "lambda",
+                M::Key(_) => "key",
+                M::Str(_) => "string",
+                M::Sym(_) => "symbol",
+                M::List(_) => "list",
+                M::Vector(_) => "vector",
+                M::Map(_) => "map",
+                M::Atom(_) => "atom",
+                M::Ch(_) => "char",
+            })
+        .into())
+    }
 }
 
 use crate::types::MalType as M;
 
 // That's a quite chonky function
-fn mal_eq(args: (&MalType, &MalType)) -> bool {
+fn mal_compare(args: (&MalType, &MalType)) -> bool {
     match (args.0, args.1) {
         (M::Nil, M::Nil) => true,
         (M::Bool(a), M::Bool(b)) => a == b,
         (M::Int(a), M::Int(b)) => a == b,
+        (M::Ch(a), M::Ch(b)) => a == b,
         (M::Key(a), M::Key(b)) | (M::Str(a), M::Str(b)) | (M::Sym(a), M::Sym(b)) => a == b,
         (M::List(a), M::List(b)) | (M::Vector(a), M::Vector(b)) => {
-            a.len() == b.len() && a.iter().zip(b.iter()).all(mal_eq)
+            a.len() == b.len() && a.iter().zip(b.iter()).all(mal_compare)
         }
         _ => false,
     }
 }
 
-pub fn mal_comp(args: &[MalType]) -> MalRet {
-    if args.len() != 2 {
-        return Err(MalErr::unrecoverable("Expected 2 arguments"));
-    }
-    Ok(M::Bool(mal_eq(bin_unpack(args)?)))
+pub fn mal_equals(args: &[MalType]) -> MalRet {
+    Ok(M::Bool(match args.len() {
+        0 => true,
+        _ => {
+            let (car, cdr) = car_cdr(args)?;
+            cdr.iter().all(|x| mal_compare((car, x)))
+        }
+    }))
 }
 
-pub fn mal_assert(args: &[MalType]) -> MalRet {
-    if args.iter().any(|i| matches!(i, M::Nil | M::Bool(false))) {
-        return Err(MalErr::unrecoverable("Assertion failed"));
+pub fn reset_bang(args: &[MalType]) -> MalRet {
+    if args.len() < 2 {
+        return Err(MalErr::unrecoverable("reset requires two arguments"));
     }
-    Ok(M::Nil)
+    let val = &args[1];
+    match &args[0] {
+        M::Atom(sym) => {
+            *std::cell::RefCell::<_>::borrow_mut(sym) = val.clone();
+            Ok(val.clone())
+        }
+        _ => Err(MalErr::unrecoverable(
+            format!("{:?} is not an atom", prt(&args[1])).as_str(),
+        )),
+    }
 }
 
 #[derive(PartialEq, Clone, Copy, Debug)]
@@ -143,10 +188,6 @@ impl MalErr {
     }
 }
 
-pub type MalArgs = Rc<Vec<MalType>>;
-pub type MalMap = HashMap<String, MalType>;
-pub type MalRet = Result<MalType, MalErr>;
-
 use crate::printer::prt;
 use MalType::{Key, Map, Str};
 
@@ -161,7 +202,7 @@ pub fn make_map(list: MalArgs) -> MalRet {
         match &list[i] {
             Key(k) | Str(k) => {
                 let v = &list[i + 1];
-                map.insert(k.to_string(), v.clone());
+                map.insert(k.clone(), v.clone());
             }
             _ => {
                 return Err(MalErr::unrecoverable(
@@ -196,16 +237,6 @@ pub fn unescape_str(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::mal_assert;
-    use crate::types::MalType as M;
-
-    #[test]
-    fn _mal_assert() {
-        assert!(matches!(mal_assert(&[M::Nil]), Err(_)));
-        assert!(matches!(mal_assert(&[M::Bool(false)]), Err(_)));
-        assert!(matches!(mal_assert(&[M::Bool(true)]), Ok(_)));
-        assert!(matches!(mal_assert(&[M::Int(1)]), Ok(_)));
-    }
 
     #[test]
     fn _escape_str() {

@@ -8,3 +8,6 @@ src/*~
 
 # history file
 .mal-history
+
+# stupid macos
+.DS_Store

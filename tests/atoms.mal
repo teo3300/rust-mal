@@ -1,0 +1,19 @@
+; atom?
+(assert (atom? (atom 1)))
+(assert (not (atom? 1)))
+
+; deref
+(assert-eq (deref (atom 1)) 1)
+
+; @ macro
+(assert-eq @(atom 1) 1)
+
+(def! ATOM (atom 1))
+
+; reset!
+(reset! ATOM 2)
+(assert-eq @ATOM 2)
+
+; swap!
+(swap! ATOM (fn* [x] (* x 2)))
+(assert-eq @ATOM 4)

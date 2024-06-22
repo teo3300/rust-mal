@@ -1,0 +1,4 @@
+; filter with builtin function
+(assert-eq (list '(1) '(2) '(3)) (filter car (list '(1) '() '(2) '() '(3))))
+; filter with lambda function
+(assert-eq (list 1 2 3) (filter int? (list 1 "string" 2 'symbol 3 :label)))

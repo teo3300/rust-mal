@@ -1,3 +1,4 @@
+use crate::eval::eval;
 use crate::types::MalErr;
 use crate::types::{MalMap, MalRet, MalType};
 use std::cell::RefCell;
@@ -15,7 +16,7 @@ impl EnvType {
             .data
             .borrow()
             .iter()
-            .map(|(k, _)| k.clone())
+            .map(|(k, _)| k.to_string())
             .collect::<Vec<String>>();
         keys.sort_unstable();
         keys
@@ -26,27 +27,31 @@ pub type Env = Rc<EnvType>;
 // Following rust implementation, using shorthand to always pas Reference count
 
 pub fn env_new(outer: Option<Env>) -> Env {
-    Rc::new(EnvType {
+    Env::new(EnvType {
         data: RefCell::new(MalMap::new()),
         outer,
     })
 }
 
-pub fn env_set(env: &Env, sym: &str, val: &MalType) -> MalType {
-    env.data.borrow_mut().insert(sym.to_string(), val.clone());
-    val.clone()
+pub fn env_set(env: &Env, sym: &str, val: &MalType) {
+    env.data.borrow_mut().insert(sym.into(), val.clone());
 }
 
 pub fn env_get(env: &Env, sym: &str) -> MalRet {
-    match env.data.borrow().get(sym) {
-        Some(val) => Ok(val.clone()),
-        None => match env.outer.clone() {
-            Some(outer) => env_get(&outer, sym),
-            None => Err(MalErr::unrecoverable(
-                format!("symbol {:?} not defined", sym).as_str(),
-            )),
-        },
+    let mut iter_env = env;
+    loop {
+        if let Some(val) = iter_env.data.borrow().get(sym) {
+            return Ok(val.clone());
+        }
+        if let Some(outer) = &iter_env.outer {
+            iter_env = &outer;
+            continue;
+        }
+        return Err(MalErr::unrecoverable(
+            format!("symbol {:?} not defined", sym).as_str(),
+        ));
     }
+    // Recursive was prettier, but we hate recursion
 }
 
 pub fn env_binds(outer: Env, binds: &MalType, exprs: &[MalType]) -> Result<Env, MalErr> {
@@ -93,11 +98,42 @@ pub fn call_func(func: &MalType, args: &[MalType]) -> CallRet {
             // It's fine to clone the environment here
             // since this is when the function is actually called
             match ast.as_ref() {
-                M::List(list) => Ok(CallFunc::MalFun(
-                    list.last().unwrap_or(&Nil).clone(),
-                    inner_env,
-                )),
+                M::List(list) => {
+                    for x in &list[0..list.len() - 1] {
+                        eval(x, inner_env.clone())?;
+                    }
+                    Ok(CallFunc::MalFun(
+                        list.last().unwrap_or_default().clone(),
+                        inner_env,
+                    ))
+                }
                 _ => scream!(),
+            }
+        }
+        M::Map(m) => {
+            if args.is_empty() {
+                return Err(MalErr::unrecoverable("No key provided to Map construct"));
+            }
+            match &args[0] {
+                M::Str(s) | M::Key(s) => {
+                    Ok(CallFunc::Builtin(m.get(s).unwrap_or_default().clone()))
+                }
+                _ => Err(MalErr::unrecoverable("Map argument must be string or key")),
+            }
+        }
+        M::Vector(v) => {
+            if args.is_empty() {
+                return Err(MalErr::unrecoverable("No key provided to Vector construct"));
+            }
+            match &args[0] {
+                M::Int(i) => {
+                    if { 0..v.len() as isize }.contains(i) {
+                        Ok(CallFunc::Builtin(v[*i as usize].clone()))
+                    } else {
+                        Ok(CallFunc::Builtin(M::Nil))
+                    }
+                }
+                _ => Err(MalErr::unrecoverable("Map argument must be string or key")),
             }
         }
         _ => Err(MalErr::unrecoverable(
@@ -106,21 +142,44 @@ pub fn call_func(func: &MalType, args: &[MalType]) -> CallRet {
     }
 }
 
-pub fn bin_unpack(list: &[MalType]) -> Result<(&MalType, &MalType), MalErr> {
-    if list.len() != 2 {
-        return Err(MalErr::unrecoverable("Two arguments required"));
+pub fn any_zero(list: &[MalType]) -> Result<&[MalType], MalErr> {
+    if list.iter().any(|x| matches!(x, M::Int(0))) {
+        return Err(MalErr::unrecoverable("Attempting division by 0"));
     }
-    Ok((&list[0], &list[1]))
+    Ok(list)
 }
 
-pub fn num_op(f: fn(isize, isize) -> MalType, args: &[MalType]) -> MalRet {
-    let (car, cdr) = bin_unpack(args)?;
-    let car = car.if_number()?;
-    let cdr = cdr.if_number()?;
-    Ok(f(car, cdr))
+pub fn arithmetic_op(set: isize, f: fn(isize, isize) -> isize, args: &[MalType]) -> MalRet {
+    Ok(M::Int(match args.len() {
+        0 => set,
+        1 => f(set, args[0].if_number()?),
+        _ => {
+            // TODO: Maybe an accumulator
+            let mut left = args[0].if_number()?;
+            for el in &args[1..] {
+                left = f(left, el.if_number()?);
+            }
+            left
+        }
+    }))
 }
 
-use MalType::Nil;
+use MalType::{Bool, Nil};
+pub fn comparison_op(f: fn(isize, isize) -> bool, args: &[MalType]) -> MalRet {
+    if args.is_empty() {
+        return Ok(Nil);
+    }
+    let (left, rights) = car_cdr(args)?;
+    let mut left = left.if_number()?;
+    for right in rights {
+        let right = right.if_number()?;
+        if !f(left, right) {
+            return Ok(Nil);
+        }
+        left = right;
+    }
+    Ok(Bool(true))
+}
 
 pub fn car(list: &[MalType]) -> Result<&MalType, MalErr> {
     match list.len() {
@@ -137,9 +196,37 @@ pub fn cdr(list: &[MalType]) -> &[MalType] {
     }
 }
 
+pub fn mal_cdr(arg: &MalType) -> MalRet {
+    let list = arg.if_list()?;
+    Ok(MalType::List(cdr(list).into()))
+}
+
+pub fn mal_car(arg: &MalType) -> MalRet {
+    let list = arg.if_list()?;
+    if list.is_empty() {
+        Ok(Nil)
+    } else {
+        Ok(list[0].clone())
+    }
+}
+
 /// Extract the car and cdr from a list
 pub fn car_cdr(list: &[MalType]) -> Result<(&MalType, &[MalType]), MalErr> {
     Ok((car(list)?, cdr(list)))
+}
+
+// TODO: fix these chonky functions
+
+pub fn mal_cons(args: &[MalType]) -> MalRet {
+    match args.len() {
+        2 => {
+            let mut car = vec![args[0].clone()];
+            let cdr = args[1].if_list()?;
+            car.extend_from_slice(cdr);
+            Ok(M::List(car.into()))
+        }
+        _ => Err(MalErr::unrecoverable("cons: requires 2 arguments")),
+    }
 }
 
 fn first(list: &[MalType]) -> &[MalType] {
@@ -153,7 +240,7 @@ fn first(list: &[MalType]) -> &[MalType] {
 // FIXME: Treat as result for now, change later
 fn last(list: &[MalType]) -> Result<&MalType, MalErr> {
     match list.len() {
-        0 => Err(MalErr::unrecoverable("Mi sono cacato le mutande")),
+        0 => Ok(&MalType::Nil),
         _ => Ok(&list[list.len() - 1]),
     }
 }
@@ -169,4 +256,10 @@ pub fn mal_exit(list: &[MalType]) -> MalRet {
         MalType::Int(val) => exit(*val as i32),
         _ => exit(-1),
     }
+}
+
+// TODO: find another way to process strings
+pub fn mal_boom(args: &[MalType]) -> MalRet {
+    let string = car(args)?.if_string()?;
+    Ok(M::List(string.chars().map(M::Ch).collect()))
 }

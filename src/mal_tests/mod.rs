@@ -17,7 +17,7 @@ mod functional {
     }
 
     #[test]
-    fn assert_fail() {
+    fn assert() {
         test!("assert")
     }
 
@@ -28,7 +28,7 @@ mod functional {
 
     #[test]
     fn builtin_equals() {
-        test!("equals");
+        test!("equals")
     }
 
     #[test]
@@ -38,6 +38,36 @@ mod functional {
 
     #[test]
     fn fibonacci() {
-        test!("fibonacci");
+        test!("fibonacci")
+    }
+
+    #[test]
+    fn forms() {
+        test!("forms")
+    }
+
+    #[test]
+    fn lists() {
+        test!("lists")
+    }
+
+    #[test]
+    fn atoms() {
+        test!("atoms")
+    }
+
+    #[test]
+    fn car_cdr() {
+        test!("car-cdr")
+    }
+
+    #[test]
+    fn map() {
+        test!("map")
+    }
+
+    #[test]
+    fn fil() {
+        test!("fil")
     }
 }

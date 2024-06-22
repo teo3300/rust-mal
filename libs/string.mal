@@ -1,0 +1,40 @@
+(def! char (fn* [l]
+    (car (boom l))))
+
+(def! char? (fn* [a]
+    (= (type a) :char)))
+
+(def! string? (fn* [a]
+    (= (type a) :string)))
+
+(def! strc (fn* [l]
+    (def! strc-r (fn* [l s]
+        (if (empty? l)
+            s
+            (strc-r (cdr l) (str s (car l))))))
+    (strc-r l "")))
+
+(def! split (fn* [s c]
+    "Split the string at every occurrence of character sc"
+    (if (and (string? s)
+             (char? c))
+        (def! split-r (fn* [l t r]
+            (if (empty? l)
+                (cons t r)
+                (do (def! cc (car l))
+                    (if (= cc c)
+                        (split-r (cdr l) "" (cons t r))
+                        (split-r (cdr l) (str t cc) r))))))
+        (raise "split: accepts a string and a char as arguments"))
+    (reverse (split-r (boom s) "" '()))))
+
+(def! join (fn* [l s]
+    "Join element of list l to a stiring, using s as separator"
+    (def! join-r (fn* [l t]
+        (if (empty? l)
+            t
+            (join-r (cdr l) (str t s (car l))))))
+    (join-r (cdr l) (car l))))
+
+(def! chsub (fn* [s c1 c2]
+    (strc (map-if (fn* [x] (= x c1)) (fn* [x] c2) (boom s)))))

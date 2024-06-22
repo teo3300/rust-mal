@@ -1,0 +1,7 @@
+;; Test car
+(assert-eq (car '(1 2 3)) 1)
+(assert-eq (car '()) nil)
+
+;; Test cdr
+(assert-eq (cdr '(1 2 3)) '(2 3))
+(assert-eq (cdr '()) '())

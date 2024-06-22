@@ -1,0 +1,58 @@
+; def!
+(assert (not (def! FALSE nil)))
+(assert (def! TRUE true))
+
+(println :def)
+(def! value-0 0)
+(assert-eq value-0 0)
+(assert-eq
+        ((fn* [x]
+            (def! value-1 1) (+ x value-1))
+            2)
+        3)
+
+(assert-fail '(def!))
+(assert-fail '(def! a))
+
+(println :do)
+; do
+(assert-eq
+    (do 1 2 3)
+    3)
+(assert-eq
+    (do
+        (def! do-test-1 1)
+        (def! do-test-2 2))
+    2)
+(assert-eq 2 do-test-2)
+(let* [a 1 b 2]
+    (def! do-test-3 3)
+    (assert-eq do-test-3 3))
+
+(assert-eq (do) nil)
+
+; if
+(assert (if true 1))
+(assert (not (if false 1)))
+(assert (not (if false nil)))
+(assert (if false nil 1))
+(assert (if true 1 nil))
+(assert-fail '(if true))
+(assert-fail '(if false))
+(assert-fail '(if))
+
+; let*
+(assert-eq (let* [let-a 1
+               let-b 2]
+    (assert-eq let-a 1)
+    (assert-eq let-b 2)
+    4) 4)
+(assert-fail 'let-a)
+
+; fn*
+(def! f (fn* [x] (def! func-var x) (+ func-var 1)))
+(assert-fail 'func-var)
+(assert-eq (f 1) 2)
+(assert-fail '(f 1 2))
+(assert-fail '(1 2 3))
+

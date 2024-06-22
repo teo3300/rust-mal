@@ -4,6 +4,8 @@
 // input, thus this can be referenced by the previous step without the need
 // to allocate more memory
 
+// FIXME: (?) multiple sentences per line, only last is kept
+
 use crate::env::Env;
 use crate::eval::eval;
 use crate::printer::pr_str;

@@ -2,7 +2,7 @@ use crate::env::Env;
 use crate::eval::eval;
 use crate::reader::{read_str, Reader};
 use crate::step6_file::rep;
-use crate::types::{MalErr, MalRet};
+use crate::types::{MalErr, MalRet, MalStr};
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
@@ -22,6 +22,10 @@ pub fn set_home_path(env: &Env) {
     .unwrap();
 }
 
+pub fn print_banner(env: &Env) {
+    let _ = eval_str("(prn BANNER)", env);
+}
+
 fn get_home_path(env: &Env) -> Result<String, MalErr> {
     Ok(eval_str("MAL_HOME", env)?.if_string()?.to_string())
 }
@@ -39,7 +43,7 @@ pub fn load_home_file(filename: &str, env: &Env, warn: bool) {
     }
 }
 
-pub fn read_file(filename: &str) -> Result<String, MalErr> {
+pub fn read_file(filename: &str) -> Result<MalStr, MalErr> {
     let mut file = File::open(filename).map_err(|_| {
         MalErr::unrecoverable(format!("Failed to open file '{}'", filename).as_str())
     })?;
@@ -49,7 +53,7 @@ pub fn read_file(filename: &str) -> Result<String, MalErr> {
         MalErr::unrecoverable(format!("Failed to read content of '{}'", filename).as_str())
     })?;
 
-    Ok(content)
+    Ok(content.into())
 }
 
 pub fn load_file(filename: &str, env: &Env) -> MalRet {
@@ -63,7 +67,6 @@ pub fn load_file(filename: &str, env: &Env) -> MalRet {
     )
 } // WTF this is becoming ever less like rust and more like lisp, did I really completely skip the file reading?
 
-extern crate rustyline;
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
 
@@ -71,6 +74,7 @@ pub fn interactive(env: Env) {
     const HISTORY: &str = ".mal-history";
     let home = get_home_path(&env).unwrap();
     let history = home + "/" + HISTORY;
+    eval_str(format!("(def! MAL_HISTORY \"{}\")", history).as_str(), &env).unwrap();
 
     // Using "Editor" instead of the standard I/O because I hate myself but not this much
     // TODO: remove unwrap and switch to a better error handling
@@ -92,7 +96,7 @@ pub fn interactive(env: Env) {
             // // Read line to compose program input
             // let mut line = String::new();
             // io::stdin().read_line(&mut line).unwrap();
-            let line = rl.readline("user> ");
+            let line = rl.readline("; mal> ");
 
             match line {
                 Ok(line) => {
@@ -105,7 +109,7 @@ pub fn interactive(env: Env) {
 
                     // Perform rep on whole available input
                     match rep(&parser, &env) {
-                        Ok(output) => output.iter().for_each(|el| eprintln!("[{}]> {}", num, el)),
+                        Ok(output) => output.iter().for_each(|el| println!("; [{}]> {}", num, el)),
                         Err(error) => {
                             if error.is_recoverable() {
                                 // && line != "\n" {

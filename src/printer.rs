@@ -5,9 +5,9 @@ use crate::types::{escape_str, MalType};
 
 fn key_str(val: &str) -> MalType {
     if val.starts_with('ʞ') {
-        M::Key(val.to_string())
+        M::Key(val.into())
     } else {
-        M::Str(val.to_string())
+        M::Str(val.into())
     }
 }
 
@@ -53,6 +53,14 @@ pub fn pr_str(ast: &MalType, print_readably: bool) -> String {
         ),
         M::Fun(..) => "#<builtin>".to_string(),
         M::MalFun { .. } => "#<function>".to_string(),
+        M::Atom(sub) => format!("Atom({})", pr_str(&sub.borrow(), print_readably)),
+        M::Ch(c) => {
+            if print_readably {
+                format!("#\\{}", c)
+            } else {
+                c.to_string()
+            }
+        }
     }
 }
 
@@ -61,7 +69,7 @@ pub fn prt(ast: &MalType) -> String {
 }
 
 pub fn print_malfun(sym: &str, params: Rc<MalType>, ast: Rc<MalType>) {
-    println!("{}\t[function]: {}", sym, prt(&params));
+    println!("; {}\t[function]: {}", sym, prt(&params));
     ast.as_ref()
         .if_list()
         .unwrap_or(&[])
