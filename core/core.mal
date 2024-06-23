@@ -71,6 +71,10 @@
     "open a mal file and evaluate its content"
     (eval (read-string (str "(do " (slurp f) "\nnil)")))))
 
+(def! module (fn* [f]
+    "load a file from the library path"
+    (load-file (str MAL_HOME "/libs/" f ".mal"))))
+
 (def! conf-reload (fn* []
     "reload mal config file"
     (load-file (str MAL_HOME "/" "config.mal"))))
@@ -139,8 +143,8 @@
 (def! BANNER
     (str 
         "; rust-mal: a toy lisp interpreter written in rust\n"
-        "; $ mal [filename ...] : load specified modules at start\n"
-        "; (load-file <name>)   : load specified module while mal is running\n"
+        "; $ mal [filename ...] : load specified files at start\n"
+        "; (load-file <name>)   : load specified file while mal is running\n"
         "; (find [pattern...])  : list symbols matching all patterns\n"
         "; (help <symbol>)      : print information about a symbol\n"
         ";\n"
@@ -186,3 +190,5 @@
             c
             (collect-r (f c (car l)) (cdr l)))))
     (collect-r i l)))
+
+(conf-reload)

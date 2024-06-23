@@ -109,16 +109,19 @@ pub fn interactive(env: Env) {
 
                     // Perform rep on whole available input
                     match rep(&parser, &env) {
-                        Ok(output) => output.iter().for_each(|el| println!("; [{}]> {}", num, el)),
+                        Ok(output) => output.iter().for_each(|el| {
+                            eprintln!("; [{}]> {}", num, el);
+                            num += 1;
+                        }),
                         Err(error) => {
                             if error.is_recoverable() {
                                 // && line != "\n" {
                                 continue;
                             }
                             eprintln!("; [{}]> Error @ {}", num, error.message());
+                            num += 1
                         }
                     }
-                    num += 1;
                     break;
                 }
                 Err(ReadlineError::Interrupted) => {

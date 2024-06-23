@@ -98,14 +98,16 @@ impl Reader {
             tk => {
                 if Regex::new(r"^-?[0-9]+$").unwrap().is_match(tk) {
                     return Ok(Int(tk.parse::<isize>().unwrap()));
-                } else if tk.starts_with('\"') {
+                }
+                if tk.starts_with('\"') {
                     if tk.len() > 1 && tk.ends_with('\"') {
                         return Ok(Str(unescape_str(tk).into()));
                     }
                     return Err(MalErr::unrecoverable(
                         "End of line reached without closing string",
                     ));
-                } else if tk.starts_with(':') {
+                }
+                if tk.starts_with(':') {
                     return Ok(Key(format!("ʞ{}", tk).into()));
                 }
                 Ok(Sym(tk.into()))

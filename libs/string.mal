@@ -1,11 +1,17 @@
 (def! char (fn* [l]
     (car (boom l))))
 
+(def! #n (char "\n"))
+(def! #s (char " "))
+(def! #t (char "\t"))
+
 (def! char? (fn* [a]
     (= (type a) :char)))
 
 (def! string? (fn* [a]
     (= (type a) :string)))
+
+(def! strlen (fn* [s] (count (boom s))))
 
 (def! strc (fn* [l]
     (def! strc-r (fn* [l s]
@@ -38,3 +44,5 @@
 
 (def! chsub (fn* [s c1 c2]
     (strc (map-if (fn* [x] (= x c1)) (fn* [x] c2) (boom s)))))
+
+

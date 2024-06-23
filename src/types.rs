@@ -220,6 +220,8 @@ pub fn escape_str(s: &str) -> String {
         String::from(s)
             .replace('\\', "\\\\")
             .replace('\n', "\\n")
+            .replace('\u{000D}', "\\r")
+            .replace('\t', "\\t")
             .replace('\"', "\\\"")
     )
 }
@@ -228,6 +230,8 @@ pub fn unescape_str(s: &str) -> String {
     String::from(&s[1..s.len() - 1])
         .replace("\\\\", "\\")
         .replace("\\n", "\n")
+        .replace("\\r", "\r")
+        .replace("\\t", "\t")
         .replace("\\\"", "\"")
 }
 

@@ -15,6 +15,8 @@ mod functional {
             ));
         }};
     }
+    // TODO: modify to accept more parameters for test/libraries
+    // TODO: text 'boom' from within rust
 
     #[test]
     fn assert() {

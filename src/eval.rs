@@ -129,7 +129,7 @@ pub fn help_form(list: &[MalType], env: Env) -> MalRet {
     let (sym, _) = car_cdr(list)?;
     let sym_str = sym.if_symbol()?;
     match eval(sym, env.clone())? {
-        M::Fun(_, desc) => println!("{}\t[builtin]: {}\n", sym_str, desc),
+        M::Fun(_, desc) => eprintln!("{}\t[builtin]: {}\n", sym_str, desc),
         M::MalFun { params, ast, .. } => print_malfun(sym_str, params, ast),
         _ => eprintln!("{}\t[symbol]: {}\n", sym_str, prt(&env_get(&env, sym_str)?)),
     }

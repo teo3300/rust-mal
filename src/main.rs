@@ -24,12 +24,15 @@ fn main() {
     load_home_file("core.mal", &reply_env, true);
     // Load config files ($MAL_HOME/config.mal, or default $HOME/.config/mal/config.mal)
     // [warn: false] since this file is optional
-    load_home_file("config.mal", &reply_env, false);
+    // replaced by (ok? '(reload-config)) at the end of core.mal
+    //  - I used this to overwrite BANNER to prevent it from displaying
+    //    based on conf
+    //load_home_file("config.mal", &reply_env, false);
 
     // load all files passed as arguments
     args().collect::<Vec<String>>()[1..].iter().for_each(|f| {
         if let Err(e) = load_file(f, &reply_env) {
-            println!("{}", e.message())
+            eprintln!("{}", e.message())
         }
     });
 
