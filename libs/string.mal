@@ -20,19 +20,35 @@
             (strc-r (cdr l) (str s (car l))))))
     (strc-r l "")))
 
-(def! split (fn* [s c]
+(def! _split-ch (fn* [s c]
     "Split the string at every occurrence of character sc"
-    (if (and (string? s)
-             (char? c))
-        (def! split-r (fn* [l t r]
-            (if (empty? l)
-                (cons t r)
-                (do (def! cc (car l))
-                    (if (= cc c)
-                        (split-r (cdr l) "" (cons t r))
-                        (split-r (cdr l) (str t cc) r))))))
-        (raise "split: accepts a string and a char as arguments"))
-    (reverse (split-r (boom s) "" '()))))
+    (def! s (boom s))
+    (def! split-r (fn* [l t r]
+        (if (empty? l)
+            (cons t r)
+            (do (def! cc (car l))
+                (if (= cc c)
+                    (split-r (cdr l) "" (cons t r))
+                    (split-r (cdr l) (str t cc) r))))))
+    (reverse (split-r s "" '()))))
+
+(def! split (fn* [string delimiter]
+    "Split the string at every occurrence of substring delimiter"
+    "An empty delimiter is splitting every character"
+    (if (= (strlen delimiter) 1)
+        (_split-ch string (char delimiter))
+        (do (def! delimiter (boom delimiter))
+            (def! split-r (fn* [string tklist matches chunk chunks]
+            (if (empty? string)
+                (cons chunk chunks)
+                (do (def! curr (car string))
+                    (def! string (cdr string))
+                    (if (empty? tklist)
+                        (split-r string delimiter "" (str curr) (cons chunk chunks))
+                        (if (= curr (car tklist))
+                            (split-r string (cdr tklist) (str matches curr) chunk chunks)
+                            (split-r string delimiter "" (str chunk matches curr) chunks)))))))
+            (reverse (split-r (boom string) delimiter "" "" '()))))))
 
 (def! join (fn* [l s]
     "Join element of list l to a stiring, using s as separator"
@@ -45,4 +61,24 @@
 (def! chsub (fn* [s c1 c2]
     (strc (map-if (fn* [x] (= x c1)) (fn* [x] c2) (boom s)))))
 
+(def! parse-csv (fn* [filename]
+    (map (fn* [x] (split x ",")) (filter (fn* [x] (not (= x "")))(split (slurp filename) "\n")))))
 
+(def! _toint {"0" 0 "1" 1
+              "2" 2 "3" 3
+              "4" 4 "5" 5
+              "6" 6 "7" 7
+              "8" 8 "9" 9})
+
+(def! parseint (fn* [string]
+    (def! string (boom string))
+    (def! sign (car string))
+    (def! parseint-r (fn* [string val]
+        (if (empty? string)
+            val
+            (if (not (def! chint (_toint (str (car string)))))
+                (raise "Failed to convert string to number")
+                (parseint-r (cdr string) (+ (* val 10) chint))))))
+    (if (= sign (char "-"))
+        (-(parseint-r (cdr string) 0))
+        (parseint-r string 0))))

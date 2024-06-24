@@ -140,7 +140,7 @@ pub fn find_form(list: &[MalType], env: Env) -> MalRet {
     let mut filtered = env.keys();
     for mat in list {
         let mat = mat.if_symbol()?;
-        filtered.retain(|x| x.contains(mat));
+        filtered.retain(|x| x.contains(mat) && !x.starts_with('_'));
     }
     eprintln!("\t[matches]:\n{}\n", filtered.join(" "));
     Ok(M::Nil)
