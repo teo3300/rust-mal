@@ -57,14 +57,20 @@ pub fn env_get(env: &Env, sym: &str) -> MalRet {
 pub fn env_binds(outer: Env, binds: &MalType, exprs: &[MalType]) -> Result<Env, MalErr> {
     let env = env_new(Some(outer));
     let binds = binds.if_vec()?;
-    if binds.len() != exprs.len() {
+    let binl = binds.len();
+    let expl = exprs.len();
+    if binl < expl {
         return Err(MalErr::unrecoverable(
-            format!("Expected {} args, got {}", binds.len(), exprs.len()).as_str(),
+            format!("Expected {} args, got {}", binl, expl).as_str(),
         ));
-    } // TODO: May be possible to leave this be and not set additional elements at all
+    }
     for (bind, expr) in binds.iter().zip(exprs.iter()) {
         let bind = bind.if_symbol()?;
         env_set(&env, bind, expr);
+    }
+    // All arguments are optional, if an argument is not specified, set it to nil
+    for bind in binds.iter().take(binl).skip(expl) {
+        env_set(&env, bind.if_symbol()?, &M::Nil);
     }
     Ok(env)
 }

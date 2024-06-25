@@ -1,3 +1,4 @@
+use std::io::{self, BufRead, Write};
 use std::{cell::RefCell, env, rc::Rc};
 
 use crate::env::{
@@ -67,7 +68,7 @@ pub fn ns_init() -> Env {
         ">="            => Fun(|a| comparison_op(   |a, b| a >= b, a), "Returns true if the first argument is greater than or equal to the second one, nil otherwise"),
         "pr-str"        => Fun(|a| Ok(Str(a.iter().map(|i| pr_str(i, true)).collect::<Vec<String>>().join("").into())), "Print readably all arguments"),
         "str"           => Fun(|a| Ok(Str(a.iter().map(|i| pr_str(i, false)).collect::<Vec<String>>().join("").into())), "Print non readably all arguments"),
-        "prn"           => Fun(|a| {a.iter().for_each(|a| print!("{}", pr_str(a, false))); Ok(Nil) }, "Print readably all the arguments"),
+        "prn"           => Fun(|a| {a.iter().for_each(|a| print!("{}", pr_str(a, false))); let _ = io::stdout().flush(); Ok(Nil) }, "Print readably all the arguments"),
         "println"       => Fun(|a| {a.iter().for_each(|a| print!("{}", pr_str(a, false))); println!(); Ok(Nil) }, "Print readably all the arguments"),
         "list"          => Fun(|a| Ok(List(a.into())), "Return the arguments as a list"),
         "type"          => Fun(|a| Ok(car(a)?.label_type()), "Returns a label indicating the type of it's argument"),
@@ -78,6 +79,7 @@ pub fn ns_init() -> Env {
         // A tribute to PHP's explode (PHP, a language I never used)
         "boom"          => Fun(mal_boom, "Split a string into a list of characters\n; BE CAREFUL WHEN USING"),
         "read-string"   => Fun(|a| read_str(Reader::new().push(car(a)?.if_string()?)).map_err(MalErr::severe), "Tokenize and read the first argument"),
+        "read-line"     => Fun(|_| Ok(Str(io::stdin().lock().lines().next().unwrap().unwrap().into())), "Read a line from input and return its content"),
         "slurp"         => Fun(|a| Ok(Str(read_file(car(a)?.if_string()?)?)), "Read a file and return the content as a string"),
         "atom"          => Fun(|a| Ok(Atom(Rc::new(RefCell::new(car(a).unwrap_or_default().clone())))), "Return an atom pointing to the given arg"),
         "deref"         => Fun(|a| if_atom!(car(a)?), "Return the content of the atom argumet"),

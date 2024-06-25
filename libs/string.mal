@@ -52,6 +52,7 @@
 
 (def! join (fn* [l s]
     "Join element of list l to a stiring, using s as separator"
+    (def! s (or s ""))
     (def! join-r (fn* [l t]
         (if (empty? l)
             t
@@ -61,8 +62,10 @@
 (def! chsub (fn* [s c1 c2]
     (strc (map-if (fn* [x] (= x c1)) (fn* [x] c2) (boom s)))))
 
-(def! parse-csv (fn* [filename]
-    (map (fn* [x] (split x ",")) (filter (fn* [x] (not (= x "")))(split (slurp filename) "\n")))))
+(def! parse-csv (fn* [filename row-s col-s]
+    (def! col-s (or col-s "\n"))
+    (def! row-s (or row-s ","))
+    (map (fn* [x] (split x row-s)) (filter (fn* [x] (not (= x "")))(split (slurp filename) col-s)))))
 
 (def! _toint {"0" 0 "1" 1
               "2" 2 "3" 3
