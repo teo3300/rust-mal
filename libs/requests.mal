@@ -1,0 +1,28 @@
+(module "string")
+
+(def! +http-version+ "HTTP/1.1")
+
+(def! #r (char "\r"))
+
+(def! headers->string (fn* [headers]
+    (if (list? headers)
+        (join (map header->string headers) "")
+        (if (string? headers) headers))))
+
+(def! header->string (fn* [header]
+    (str (car header) ":" (car (cdr header)) #r #n)))
+
+(def! make-http-req (fn* [method target headers content]
+    (str method #s target #s +http-version+
+         #r #n
+         (or (headers->string headers) "")
+         #r #n
+         (or content ""))))
+
+(def! make-http-res (fn* [status-code reason-phrase headers data]
+    (str +http-version+ #s status-code #s reason-phrase
+         #r #n
+         (or (headers->string headers) "")
+         #r #n
+         (or data ""))))
+
