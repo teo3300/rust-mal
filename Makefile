@@ -1,6 +1,6 @@
 default: build-release
 
-build-release:
+build-release: test
 	@echo "Build release"
 	@cargo build --release
 
@@ -8,7 +8,7 @@ test:
 	@echo "Test release"
 	@cargo test --release
 
-conf:
+conf: test
 	@echo "Copy core and libraries"
 	@mkdir -p ${HOME}/.config/mal
 	cp -f core/core.mal ${HOME}/.config/mal/
