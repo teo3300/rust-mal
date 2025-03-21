@@ -5,3 +5,7 @@ Trying and implementing [mal](https://github.com/kanaka/mal) project from [kanak
 ## Why
 
 Because I need to improve my knowledge of rust and I also don't know how to use lisp
+
+## Installation
+
+Running `make install` should suffice

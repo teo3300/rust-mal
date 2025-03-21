@@ -6,9 +6,9 @@ build-release:
 
 test:
 	@echo "Test release"
-	@cargo test --release
+	@MAL_HOME=core cargo test --release
 
-conf:
+conf: test
 	@echo "Copy core and libraries"
 	@mkdir -p ${HOME}/.config/mal
 	cp -f core/core.mal ${HOME}/.config/mal/
@@ -17,6 +17,7 @@ conf:
 
 install: build-release test conf
 	@echo "Install mal"
+	@sudo mkdir -p /usr/local/bin
 	sudo cp target/release/rust-mal /usr/local/bin/mal
 	@sudo chown ${USER} /usr/local/bin/mal
 	@echo "To start mal run:"

@@ -76,7 +76,7 @@ pub fn ns_init() -> Env {
         "car"           => Fun(|a| mal_car(car(a)?), "Returns the first element of the list, NIL if its empty"),
         "cdr"           => Fun(|a| mal_cdr(car(a)?), "Returns all the list but the first element"),
         // A tribute to PHP's explode (PHP, a language I never used)
-        "boom"          => Fun(mal_boom, "Split a string into a list of string\n; BE CAREFUL WHEN USING"),
+        "boom"          => Fun(mal_boom, "Split a string into a list of chars\n; BE CAREFUL WHEN USING"),
         "read-string"   => Fun(|a| read_str(Reader::new().push(car(a)?.if_string()?)).map_err(MalErr::severe), "Tokenize and read the first argument"),
         "slurp"         => Fun(|a| Ok(Str(read_file(car(a)?.if_string()?)?)), "Read a file and return the content as a string"),
         "atom"          => Fun(|a| Ok(Atom(Rc::new(RefCell::new(car(a).unwrap_or_default().clone())))), "Return an atom pointing to the given arg"),
