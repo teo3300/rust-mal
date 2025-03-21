@@ -11,6 +11,7 @@ test:
 conf: test
 	@echo "Copy core and libraries"
 	@mkdir -p ${HOME}/.config/mal
+	@touch ${HOME}/.config/mal/.mal-history
 	cp -f core/core.mal ${HOME}/.config/mal/
 	@mkdir -p ${HOME}/.config/mal/libs
 	cp -f libs/* ${HOME}/.config/mal/libs/
