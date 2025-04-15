@@ -70,6 +70,10 @@ pub fn load_file(filename: &str, env: &Env) -> MalRet {
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
 
+pub fn pre_load(argv: &Vec<String>, env: &Env) {
+    eval_str(format!("(def! *ARGV* '({}))", argv[1..].iter().map(|x| x.to_string() + " ").collect::<String>()).as_str(), &env).unwrap();
+}
+
 pub fn interactive(env: Env) {
     const HISTORY: &str = ".mal-history";
     let home = get_home_path(&env).unwrap();

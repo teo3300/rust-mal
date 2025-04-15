@@ -1,23 +1,44 @@
+MAL_HOME ?= ${HOME}/.config/mal
+BINARY_DIR ?= /usr/local/bin
+CONFIG_FILE := ${MAL_HOME}/config.mal
+
 default: build-release
 
 build-release: test
-	@echo "Build release"
-	@cargo build --release
+	@echo "Building release for installation"
+	@cargo build --release -q
 
 test:
-	@echo "Test release"
-	@cargo test --release
+	@echo "Testing release"
+	@MAL_HOME=core cargo test --release -q
 
 conf: test
-	@echo "Copy core and libraries"
-	@mkdir -p ${HOME}/.config/mal
-	cp -f core/core.mal ${HOME}/.config/mal/
-	@mkdir -p ${HOME}/.config/mal/libs
-	cp -f libs/* ${HOME}/.config/mal/libs/
+	@echo "Copying config"
+	@mkdir -p ${MAL_HOME}
+	@cp -f core/core.mal ${MAL_HOME}/
+	@mkdir -p ${MAL_HOME}/libs
+	@cp -f libs/* ${MAL_HOME}/libs/
+	@touch ${MAL_HOME}/.mal-history
+	@touch ${MAL_HOME}/config.mal
+	@test -s ${CONFIG_FILE} || (\
+		echo ";; Write here your mal config" >> ${MAL_HOME}/config.mal\
+		&& echo "; (def! BANNER \"\") ; Hide banner at startup" >> ${MAL_HOME}/config.mal\
+	)
 
 install: build-release test conf
-	@echo "Install mal"
-	sudo cp target/release/rust-mal /usr/local/bin/mal
-	@sudo chown ${USER} /usr/local/bin/mal
+	@echo "Installing release"
+	@echo "Provide password for installing \"mal\" to \"${BINARY_DIR}\""
+	@sudo mkdir -p ${BINARY_DIR}
+	@sudo cp target/release/rust-mal ${BINARY_DIR}/mal
+	@sudo chown ${USER} ${BINARY_DIR}/mal
+	@echo
+	@echo '***************************************'
+	@echo '* mal has been successfully installed *'
+	@echo '***************************************'
+	@echo IMPORTANT NOTES:
+	@echo
+	@echo "Make sure that \"${BINARY_DIR}\" is included into \x24PATH"
 	@echo "To start mal run:"
-	@printf "\tmal [path/module.mal ...]\n\n"
+	@printf "\tmal [path/to/script [args ...]]\n\n"
+	@echo "To config mal edit:"
+	@printf "\t${MAL_HOME}/config.mal"

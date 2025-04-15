@@ -12,7 +12,7 @@ mod step6_file;
 mod types;
 
 use core::ns_init;
-use parse_tools::{interactive, load_file, load_home_file, print_banner, set_home_path};
+use parse_tools::{interactive, load_file, load_home_file, pre_load, print_banner, set_home_path};
 
 fn main() {
     // Initialize ns environment
@@ -29,12 +29,21 @@ fn main() {
     //    based on conf
     //load_home_file("config.mal", &reply_env, false);
 
-    // load all files passed as arguments
-    args().collect::<Vec<String>>()[1..].iter().for_each(|f| {
-        if let Err(e) = load_file(f, &reply_env) {
-            eprintln!("{}", e.message())
+    // load ~~all files~~ first file passed as arguments
+    //args().collect::<Vec<String>>()[1..].iter().for_each(|f| {
+    //    if let Err(e) = load_file(f, &reply_env) {
+    //        eprintln!("{}", e.message())
+    //    }
+    //});
+    {
+        let argv = args().collect::<Vec<String>>();
+        pre_load(&argv, &reply_env);
+        if argv.len() > 1 {
+            if let Err(e) = load_file(&argv[1], &reply_env) {
+                eprintln!("{}", e.message())
+            }
         }
-    });
+    }
 
     print_banner(&reply_env);
 
