@@ -41,4 +41,4 @@ install: build-release test conf
 	@echo "To start mal run:"
 	@printf "\tmal [path/to/script [args ...]]\n\n"
 	@echo "To config mal edit:"
-	@printf "\t${MAL_HOME}/config.mal"
+	@printf "\t${MAL_HOME}/config.mal\n"
