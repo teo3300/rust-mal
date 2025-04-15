@@ -32,9 +32,7 @@
                     (split-r (cdr l) (str t cc) r))))))
     (reverse (split-r s "" '()))))
 
-(def! split (fn* [string delimiter]
-    "Split the string at every occurrence of substring delimiter"
-    "An empty delimiter is splitting every character"
+(def! split-h (fn* [string delimiter]
     (if (= (strlen delimiter) 1)
         (_split-ch string (char delimiter))
         (do (def! delimiter (boom delimiter))
@@ -49,6 +47,13 @@
                             (split-r string (cdr tklist) (str matches curr) chunk chunks)
                             (split-r string delimiter "" (str chunk matches curr) chunks)))))))
             (reverse (split-r (boom string) delimiter "" "" '()))))))
+
+(def! split (fn* [string delimiter]
+    "Split the string at every occurrence of substring delimiter"
+    "An empty delimiter is splitting every character"
+    (if (= (strlen delimiter) 0)
+        (cdr (split-h string delimiter))
+        (split-h string delimiter))))
 
 (def! join (fn* [l s]
     "Join element of list l to a stiring, using s as separator"
