@@ -23,6 +23,10 @@ conf: test
 	@test -s ${CONFIG_FILE} || (\
 		echo ";; Write here your mal config" >> ${MAL_HOME}/config.mal\
 		&& echo "; (def! BANNER \"\") ; Hide banner at startup" >> ${MAL_HOME}/config.mal\
+		&& echo '' >> ${MAL_HOME}/config.mal\
+		&& echo '(def! BANNER (str BANNER' >> ${MAL_HOME}/config.mal\
+	    && echo '";\n; **** To remove this banner and config mal, edit: ****\n"' >> ${MAL_HOME}/config.mal\
+		&& echo '";     /Users/rogora/.config/mal/config.mal\n"))' >> ${MAL_HOME}/config.mal\
 	)
 
 install: build-release test conf

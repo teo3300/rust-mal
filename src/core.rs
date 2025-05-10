@@ -67,7 +67,7 @@ pub fn ns_init() -> Env {
         "<="            => Fun(|a| comparison_op(   |a, b| a <= b, a), "Returns true if the first argument is smaller than or equal to the second one, nil otherwise"),
         ">="            => Fun(|a| comparison_op(   |a, b| a >= b, a), "Returns true if the first argument is greater than or equal to the second one, nil otherwise"),
         "pr-str"        => Fun(|a| Ok(Str(a.iter().map(|i| pr_str(i, true)).collect::<Vec<String>>().join("").into())), "Print readably all arguments"),
-        "str"           => Fun(|a| Ok(Str(a.iter().map(|i| pr_str(i, false)).collect::<Vec<String>>().join("").into())), "Print non readably all arguments"),
+        "str"           => Fun(|a| Ok(Str(a.iter().map(|i| pr_str(i, false)).collect::<Vec<String>>().join("").into())), "Concatenate all arguments as a string"),
         "prn"           => Fun(|a| {a.iter().for_each(|a| print!("{}", pr_str(a, false))); let _ = io::stdout().flush(); Ok(Nil) }, "Print readably all the arguments"),
         "println"       => Fun(|a| {a.iter().for_each(|a| print!("{}", pr_str(a, false))); println!(); Ok(Nil) }, "Print readably all the arguments"),
         "list"          => Fun(|a| Ok(List(a.into())), "Return the arguments as a list"),
