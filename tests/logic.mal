@@ -1,12 +1,12 @@
 ; positive assert
-(assert true)
+(assert t)
 (assert ())
 (assert 1)
 
 ; not
-(assert (not false))
 (assert (not nil))
-(assert (not (not true)))
+(assert (not nil))
+(assert (not (not t)))
 
 ; or
 (assert (not (or nil nil)))

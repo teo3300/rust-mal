@@ -92,8 +92,7 @@ impl Reader {
     fn read_atom(&self) -> MalRet {
         match &self.next()?[..] {
             ")" | "]" | "}" => Err(MalErr::unrecoverable("Missing open parenthesis")),
-            "false" => Ok(Bool(false)),
-            "true" => Ok(Bool(true)),
+            "t" => Ok(T),
             "nil" => Ok(Nil),
             tk => {
                 if Regex::new(r"^-?[0-9]+$").unwrap().is_match(tk) {
@@ -269,10 +268,10 @@ mod tests {
     #[test]
     fn read_atom() {
         let r = Reader::new();
-        r.push("nil 1 true a \"s\" :a ) ] }");
+        r.push("nil 1 t a \"s\" :a ) ] }");
         assert!(matches!(r.read_atom(), Ok(x) if matches!(x, M::Nil)));
         assert!(matches!(r.read_atom(), Ok(x) if matches!(x, M::Int(1))));
-        assert!(matches!(r.read_atom(), Ok(x) if matches!(x, M::Bool(true))));
+        assert!(matches!(r.read_atom(), Ok(x) if matches!(x, M::T)));
         assert!(
             matches!(r.read_atom(), Ok(x) if matches!(x.clone(), M::Sym(v) if matches!(v.borrow(), "a")))
         );
@@ -314,7 +313,7 @@ mod tests {
         r.clear();
 
         // Test map
-        r.push("{\"i\" 1 \"s\" \"str\" \"t\" true \"n\" nil :s :sym}");
+        r.push("{\"i\" 1 \"s\" \"str\" \"t\" t \"n\" nil :s :sym}");
         let t = match read_str(&r) {
             Ok(x) => match x {
                 M::Map(x) => x,
@@ -329,7 +328,7 @@ mod tests {
             }
         };
         assert!(matches!(t.get("n"),   Some(x) if matches!(&x, M::Nil)));
-        assert!(matches!(t.get("t"),   Some(x) if matches!(&x, M::Bool(v) if *v)));
+        assert!(matches!(t.get("t"),   Some(x) if matches!(&x, M::T)));
         assert!(matches!(t.get("i"),   Some(x) if matches!(&x, M::Int(v) if *v == 1)));
         assert!(
             matches!(t.get("s"),   Some(x) if matches!(&x, M::Str(v) if matches!(v.borrow(), "str")))

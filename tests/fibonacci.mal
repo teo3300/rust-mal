@@ -9,7 +9,7 @@
                 expected
                 "got"
                 (n-fib n)))
-            (assert false)))))      ; cause test panic
+            (assert nil)))))      ; cause test panic
 
 (assert-fib 0 0)
 (assert-fib 1 1)

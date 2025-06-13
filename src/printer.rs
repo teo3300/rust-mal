@@ -14,10 +14,10 @@ fn key_str(val: &str) -> MalType {
 pub fn pr_str(ast: &MalType, print_readably: bool) -> String {
     match ast {
         M::Nil => "NIL".to_string(),
+        M::T => "t".to_string(),
         M::Sym(sym) => sym.to_string(),
         M::Key(sym) => sym[2..].to_string(),
         M::Int(val) => val.to_string(),
-        M::Bool(val) => val.to_string(),
         M::Str(str) => {
             if print_readably {
                 escape_str(str)

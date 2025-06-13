@@ -25,9 +25,9 @@ pub enum MalType {
     Str(MalStr),
     Ch(char),
     Int(isize),
-    Bool(bool),
     Atom(Rc<RefCell<MalType>>),
     Nil,
+    T,
 }
 
 impl Default for &MalType {
@@ -86,7 +86,7 @@ impl MalType {
         Key(("ʞ:".to_owned()
             + match self {
                 M::Nil => "nil",
-                M::Bool(_) => "bool",
+                M::T => "t",
                 M::Int(_) => "int",
                 M::Fun(_, _) | M::MalFun { .. } => "lambda",
                 M::Key(_) => "key",
@@ -108,7 +108,7 @@ use crate::types::MalType as M;
 fn mal_compare(args: (&MalType, &MalType)) -> bool {
     match (args.0, args.1) {
         (M::Nil, M::Nil) => true,
-        (M::Bool(a), M::Bool(b)) => a == b,
+        (M::T, M::T) => true,
         (M::Int(a), M::Int(b)) => a == b,
         (M::Ch(a), M::Ch(b)) => a == b,
         (M::Key(a), M::Key(b)) | (M::Str(a), M::Str(b)) | (M::Sym(a), M::Sym(b)) => a == b,
@@ -120,13 +120,17 @@ fn mal_compare(args: (&MalType, &MalType)) -> bool {
 }
 
 pub fn mal_equals(args: &[MalType]) -> MalRet {
-    Ok(M::Bool(match args.len() {
-        0 => true,
+    Ok(match args.len() {
+        0 => M::T,
         _ => {
             let (car, cdr) = car_cdr(args)?;
-            cdr.iter().all(|x| mal_compare((car, x)))
+            if cdr.iter().all(|x| mal_compare((car, x))) {
+                M::T
+            } else {
+                M::Nil
+            }
         }
-    }))
+    })
 }
 
 pub fn reset_bang(args: &[MalType]) -> MalRet {

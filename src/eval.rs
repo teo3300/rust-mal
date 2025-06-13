@@ -104,7 +104,7 @@ fn if_form(list: &[MalType], env: Env) -> MalRet {
     }
     let (cond, branches) = car_cdr(list)?;
     Ok(match eval(cond, env.clone())? {
-        M::Nil | M::Bool(false) => match branches.len() {
+        M::Nil => match branches.len() {
             1 => M::Nil,
             _ => branches[1].clone(),
         },
@@ -195,7 +195,7 @@ pub fn eval(ast: &MalType, env: Env) -> MalRet {
                         NAME_OK => {
                             return match eval(car(args)?, env.clone()) {
                                 Err(_) => Ok(M::Nil),
-                                _ => Ok(M::Bool(true)),
+                                _ => Ok(M::T),
                             }
                         }
                         // Special form, sad

@@ -8,13 +8,13 @@
 
 ; nil
 (assert (= nil nil))
-(assert (not (= nil true)))
+(assert (not (= nil t)))
 (assert (not (= nil 1)))
 
 ; bool
-(assert (= true true))
-(assert (not (= false true)))
-(assert (not (= true 1)))
+(assert (= t t))
+(assert (not (= nil t)))
+(assert (not (= t 1)))
 
 ; int
 (assert (= 1 1))
