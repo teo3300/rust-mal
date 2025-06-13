@@ -170,7 +170,7 @@ pub fn arithmetic_op(set: isize, f: fn(isize, isize) -> isize, args: &[MalType])
     }))
 }
 
-use MalType::{Bool, Nil};
+use MalType::{Nil, T};
 pub fn comparison_op(f: fn(isize, isize) -> bool, args: &[MalType]) -> MalRet {
     if args.is_empty() {
         return Ok(Nil);
@@ -184,7 +184,7 @@ pub fn comparison_op(f: fn(isize, isize) -> bool, args: &[MalType]) -> MalRet {
         }
         left = right;
     }
-    Ok(Bool(true))
+    Ok(T)
 }
 
 pub fn car(list: &[MalType]) -> Result<&MalType, MalErr> {

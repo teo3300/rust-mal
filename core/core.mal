@@ -1,11 +1,15 @@
 ;; Previously in core.rs
 ; Logic
 
+; Just to keep them if someone uses them
+(def! true t)
+(def! false nil)
+
 ; Identity function
 (def! I (fn* [x] x))
 
 (def! not (fn* [x]
-    (if x nil true)))
+    (if x nil t)))
 
 (def! and (fn* [a b]
     (if a
@@ -152,10 +156,10 @@
 
 (def! reverse (fn* [x]
     "Reverses order of elements in the arg"
-    (def! reverse-r (fn* [x t]
+    (def! reverse-r (fn* [x e]
         (if (empty? x)
-            t
-            (reverse-r (cdr x) (cons (car x) t)))))
+            e
+            (reverse-r (cdr x) (cons (car x) e)))))
     (reverse-r x '())))
 
 (def! map (fn* [f l]
@@ -171,8 +175,8 @@
     (def! filter-r (fn* [l p]
         (if (empty? l)
             p
-            (if (f (def! t (car l)))
-                (filter-r (cdr l) (cons t p))
+            (if (f (def! e (car l)))
+                (filter-r (cdr l) (cons e p))
                 (filter-r (cdr l) p)))))
     (reverse (filter-r l '()))))
 

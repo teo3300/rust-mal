@@ -1,6 +1,6 @@
 ; def!
 (assert (not (def! FALSE nil)))
-(assert (def! TRUE true))
+(assert (def! TRUE t))
 
 (println :def)
 (def! value-0 0)
@@ -32,13 +32,13 @@
 (assert-eq (do) nil)
 
 ; if
-(assert (if true 1))
-(assert (not (if false 1)))
-(assert (not (if false nil)))
-(assert (if false nil 1))
-(assert (if true 1 nil))
-(assert-fail '(if true))
-(assert-fail '(if false))
+(assert (if t 1))
+(assert (not (if nil 1)))
+(assert (not (if nil nil)))
+(assert (if nil nil 1))
+(assert (if t 1 nil))
+(assert-fail '(if t))
+(assert-fail '(if nil))
 (assert-fail '(if))
 
 ; let*
