@@ -1,22 +1,27 @@
 ; +
-(assert (= (+ 1 -4) -3))
-(assert (= (+ 1 1) 2))
-
+(assert-eq (+ 1 -4) -3)
+(assert-eq (+ 1 1) 2)
 ; -
-(assert (= (- 2 1) 1))
-(assert (= (- 1 2) -1))
+(assert-eq (- 2 1) 1)
+(assert-eq (- 1 2) -1)
 
 ; *
-(assert (= (* 2 3) 6))
-(assert (= (* -2 3) -6))
-(assert (= (* -2 -3) 6))
+(assert-eq (* 2 3) 6)
+(assert-eq (* -2 3) -6)
+(assert-eq (* -2 -3) 6)
 
 ; /
-(assert (= (/ 3 2) 1))
-(assert (= (/ 2 3) 0))
-(assert (= (/ -10 2) -5))
-(assert (= (/ -10 -2) 5))
+(assert-eq (/ 3 2) 3/2)
+(assert-eq (floor (/ 3 2)) 1)
+(assert-eq (/ 2 3) 2/3)
+(assert-eq (floor (/ 2 3)) 0)
+(assert-eq (/ -10 2) -5)
+(assert-eq (/ -10 -2) 5)
 (assert (not (ok? (/ 12 0))))
+
+; frac rart
+(assert-eq (num 3/2) 3)
+(assert-eq (den 3/2) 2)
 
 ; >
 (assert (> 3 2))
