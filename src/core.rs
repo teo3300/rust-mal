@@ -38,8 +38,11 @@ macro_rules! env_init {
 use crate::parse_tools::read_file;
 use crate::printer::{pr_str, prt};
 use crate::reader::{read_str, Reader};
-use crate::types::MalType::{Atom, Fun, Int, List, Nil, Str};
 use crate::types::{mal_equals, reset_bang, MalErr};
+use crate::types::{
+    Frac,
+    MalType::{Atom, Fun, List, Nil, Num, Str},
+};
 
 macro_rules! if_atom {
     ($val:expr) => {{
@@ -72,10 +75,14 @@ pub fn ns_init() -> Env {
         "println"       => Fun(|a| {a.iter().for_each(|a| print!("{}", pr_str(a, false))); println!(); Ok(Nil) }, "Print readably all the arguments"),
         "list"          => Fun(|a| Ok(List(a.into())), "Return the arguments as a list"),
         "type"          => Fun(|a| Ok(car(a)?.label_type()), "Returns a label indicating the type of it's argument"),
-        "count"         => Fun(|a| Ok(Int(car(a)?.if_list()?.len() as isize)), "Return the number of elements in the first argument"),
+        "count"         => Fun(|a| Ok(Num(Frac::num(car(a)?.if_list()?.len() as isize))), "Return the number of elements in the first argument"),
         "="             => Fun(mal_equals, "Return true if the first two parameters are the same type and content, in case of lists propagate to all elements (NOT IMPLEMENTED for 'Map', 'Fun' and 'MalFun')"),
         "car"           => Fun(|a| mal_car(car(a)?), "Returns the first element of the list, NIL if its empty"),
         "cdr"           => Fun(|a| mal_cdr(car(a)?), "Returns all the list but the first element"),
+        // Number functions, still to decide how to handle
+        "num"           => Fun(|a| Ok(Num(Frac::num(car(a)?.if_number()?.get_num()))), "Get numerator of the number"),
+        "den"           => Fun(|a| Ok(Num(Frac::num(car(a)?.if_number()?.get_den() as isize))), "Get denominator of the number"),
+        "floor"         => Fun(|a| Ok(Num(Frac::num(car(a)?.if_number()?.int()))), "Approximate the number to the closest smaller integer"),
         // A tribute to PHP's explode (PHP, a language I never used)
         "boom"          => Fun(mal_boom, "Split a string into a list of characters\n; BE CAREFUL WHEN USING"),
         "read-string"   => Fun(|a| read_str(Reader::new().push(car(a)?.if_string()?)).map_err(MalErr::severe), "Tokenize and read the first argument"),

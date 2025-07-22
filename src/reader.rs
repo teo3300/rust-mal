@@ -95,8 +95,11 @@ impl Reader {
             "t" => Ok(T),
             "nil" => Ok(Nil),
             tk => {
-                if Regex::new(r"^-?[0-9]+$").unwrap().is_match(tk) {
-                    return Ok(Int(tk.parse::<isize>().unwrap()));
+                if Regex::new(r"^[-\+]?[0-9]+(/[0-9]+)?$")
+                    .unwrap()
+                    .is_match(tk)
+                {
+                    return Ok(Num(Frac::from_str(&tk)));
                 }
                 if tk.starts_with('\"') {
                     if tk.len() > 1 && tk.ends_with('\"') {
@@ -180,7 +183,7 @@ mod tests {
 
     use crate::{
         reader::read_str,
-        types::{MalMap, MalType as M},
+        types::{Frac, MalMap, MalType as M},
     };
 
     use super::{tokenize, Reader};
@@ -270,7 +273,9 @@ mod tests {
         let r = Reader::new();
         r.push("nil 1 t a \"s\" :a ) ] }");
         assert!(matches!(r.read_atom(), Ok(x) if matches!(x, M::Nil)));
-        assert!(matches!(r.read_atom(), Ok(x) if matches!(x, M::Int(1))));
+        assert!(
+            matches!(r.read_atom(), Ok(x) if matches!(x.clone(), M::Num(v) if v == Frac::num(1)))
+        );
         assert!(matches!(r.read_atom(), Ok(x) if matches!(x, M::T)));
         assert!(
             matches!(r.read_atom(), Ok(x) if matches!(x.clone(), M::Sym(v) if matches!(v.borrow(), "a")))
@@ -298,7 +303,7 @@ mod tests {
             if matches!(x.clone(), M::List(list)
                 if list.len() == expected.len()
                 && list.iter().zip(expected)
-                    .all(|(x, y)| matches!(x, M::Int(v) if (*v as isize) == y)))));
+                    .all(|(x, y)| matches!(x, M::Num(v) if v.int() == y)))));
         r.clear();
 
         // Test vector
@@ -309,7 +314,7 @@ mod tests {
             if matches!(x.clone(), M::Vector(list)
                 if list.len() == exp.len()
                 && list.iter().zip(exp)
-                    .all(|(x, y)| matches!(x, M::Int(v) if (*v as isize) == y)))));
+                    .all(|(x, y)| matches!(x, M::Num(v) if v.int() == y)))));
         r.clear();
 
         // Test map
@@ -329,7 +334,7 @@ mod tests {
         };
         assert!(matches!(t.get("n"),   Some(x) if matches!(&x, M::Nil)));
         assert!(matches!(t.get("t"),   Some(x) if matches!(&x, M::T)));
-        assert!(matches!(t.get("i"),   Some(x) if matches!(&x, M::Int(v) if *v == 1)));
+        assert!(matches!(t.get("i"),   Some(x) if matches!(&x, M::Num(v) if v.int() == 1)));
         assert!(
             matches!(t.get("s"),   Some(x) if matches!(&x, M::Str(v) if matches!(v.borrow(), "str")))
         );

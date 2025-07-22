@@ -1,8 +1,9 @@
 use crate::eval::eval;
 use crate::types::MalErr;
-use crate::types::{MalMap, MalRet, MalType};
+use crate::types::{Frac, MalMap, MalRet, MalType};
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::usize;
 
 #[derive(Clone)]
 pub struct EnvType {
@@ -132,9 +133,9 @@ pub fn call_func(func: &MalType, args: &[MalType]) -> CallRet {
                 return Err(MalErr::unrecoverable("No key provided to Vector construct"));
             }
             match &args[0] {
-                M::Int(i) => {
-                    if { 0..v.len() as isize }.contains(i) {
-                        Ok(CallFunc::Builtin(v[*i as usize].clone()))
+                M::Num(i) => {
+                    if { 0..v.len() as isize }.contains(&i.int()) {
+                        Ok(CallFunc::Builtin(v[i.int() as usize].clone()))
                     } else {
                         Ok(CallFunc::Builtin(M::Nil))
                     }
@@ -149,29 +150,41 @@ pub fn call_func(func: &MalType, args: &[MalType]) -> CallRet {
 }
 
 pub fn any_zero(list: &[MalType]) -> Result<&[MalType], MalErr> {
-    if list.iter().any(|x| matches!(x, M::Int(0))) {
+    if list
+        .iter()
+        .any(|x| matches!(x, M::Num(v) if v.exact_zero()))
+    {
         return Err(MalErr::unrecoverable("Attempting division by 0"));
     }
     Ok(list)
 }
 
-pub fn arithmetic_op(set: isize, f: fn(isize, isize) -> isize, args: &[MalType]) -> MalRet {
-    Ok(M::Int(match args.len() {
-        0 => set,
-        1 => f(set, args[0].if_number()?),
+pub fn arithmetic_op(set: isize, f: fn(Frac, Frac) -> Frac, args: &[MalType]) -> MalRet {
+    Ok(M::Num(match args.len() {
+        0 => Frac::num(set),
+        1 => f(Frac::num(set), args[0].if_number()?),
         _ => {
             // TODO: Maybe an accumulator
             let mut left = args[0].if_number()?;
             for el in &args[1..] {
                 left = f(left, el.if_number()?);
+
+                const SIM_TRIG: usize = usize::isqrt(std::isize::MAX as usize);
+
+                // TODO: consider if simplifying at every operation or every N
+                //          or just at the end, no idea on how it scale
+                if std::cmp::max(left.get_num().abs() as usize, left.get_den()) > SIM_TRIG {
+                    left = left.simplify();
+                }
             }
-            left
+            // Always simplify at the end
+            left.simplify()
         }
     }))
 }
 
 use MalType::{Nil, T};
-pub fn comparison_op(f: fn(isize, isize) -> bool, args: &[MalType]) -> MalRet {
+pub fn comparison_op(f: fn(Frac, Frac) -> bool, args: &[MalType]) -> MalRet {
     if args.is_empty() {
         return Ok(Nil);
     }
@@ -259,7 +272,7 @@ use std::process::exit;
 
 pub fn mal_exit(list: &[MalType]) -> MalRet {
     match car(list)? {
-        MalType::Int(val) => exit(*val as i32),
+        MalType::Num(val) => exit(val.int() as i32),
         _ => exit(-1),
     }
 }

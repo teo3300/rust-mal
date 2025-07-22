@@ -1,10 +1,144 @@
 use crate::env::{car_cdr, Env};
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{
+    cell::RefCell,
+    cmp::Ordering,
+    collections::HashMap,
+    ops::{Add, Div, Mul, Sub},
+    rc::Rc,
+};
 
 pub type MalStr = Rc<str>;
 pub type MalArgs = Rc<[MalType]>;
 pub type MalMap = HashMap<MalStr, MalType>;
 pub type MalRet = Result<MalType, MalErr>;
+
+#[derive(Clone, Copy)]
+pub struct Frac {
+    num: isize,
+    den: usize,
+}
+
+impl Add for Frac {
+    type Output = Self;
+    fn add(self, other: Self) -> Self {
+        Self {
+            num: self.num * other.den as isize + other.num * self.den as isize,
+            den: self.den * other.den,
+        }
+    }
+}
+
+impl Sub for Frac {
+    type Output = Self;
+    fn sub(self, other: Self) -> Self {
+        Self {
+            num: self.num * other.den as isize - other.num * self.den as isize,
+            den: self.den * other.den,
+        }
+    }
+}
+
+impl Mul for Frac {
+    type Output = Self;
+    fn mul(self, other: Self) -> Self {
+        Self {
+            num: self.num * other.num,
+            den: self.den * other.den,
+        }
+    }
+}
+
+impl Div for Frac {
+    type Output = Self;
+    fn div(self, other: Frac) -> Self {
+        let other_sign = other.num.signum();
+        Self {
+            num: self.num * other.den as isize * other_sign,
+            den: self.den * other.num.abs() as usize,
+        }
+    }
+}
+
+impl PartialOrd for Frac {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some((self.num * other.den as isize).cmp(&(other.num * self.den as isize)))
+    }
+}
+
+impl PartialEq for Frac {
+    fn eq(&self, other: &Self) -> bool {
+        (!((self.num < 0) ^ (other.num < 0)))
+            && self.num.abs() as usize * other.den == other.num.abs() as usize * self.den
+    }
+}
+
+impl Frac {
+    pub fn frac(num: isize, den: usize) -> Self {
+        Self { num, den }
+    }
+
+    pub fn num(num: isize) -> Self {
+        Self { num, den: 1 }
+    }
+
+    pub fn exact_zero(&self) -> bool {
+        self.num == 0
+    }
+
+    pub fn get_num(&self) -> isize {
+        self.num
+    }
+
+    pub fn get_den(&self) -> usize {
+        self.den
+    }
+
+    fn _gcd(&self) -> usize {
+        let mut t: usize;
+        let mut a = self.num.abs() as usize;
+        let mut b = self.den;
+        while b > 0 {
+            t = b;
+            b = a % b;
+            a = t;
+        }
+        return a;
+    }
+
+    pub fn simplify(&self) -> Frac {
+        // Euclid's algorithm to reduce fraction
+        // TODO: (decide if implementing this automathically once fraction
+        //          numbers become bigger than specified)
+        let gcd = self._gcd();
+        return Frac {
+            num: self.num / gcd as isize,
+            den: self.den / gcd,
+        };
+    }
+
+    pub fn int(&self) -> isize {
+        self.num / self.den as isize
+    }
+
+    pub fn to_string(&self) -> String {
+        let mut tmp = self.num.to_string();
+        if self.den != 1 {
+            tmp = tmp + "/" + &self.den.to_string()
+        }
+        return tmp;
+    }
+    // return Ok(Num(Frac::num(tk.parse::<isize>().unwrap())));
+
+    pub fn from_str(tk: &str) -> Self {
+        match tk.find("/") {
+            Some(v) => Self {
+                num: tk[0..v].parse::<isize>().unwrap(),
+                den: tk[v + 1..tk.len()].parse::<usize>().unwrap(),
+            },
+            None => Frac::num(tk.parse::<isize>().unwrap()),
+        }
+    }
+}
 
 // All Mal types should inherit from this
 #[derive(Clone)]
@@ -24,7 +158,7 @@ pub enum MalType {
     Key(MalStr),
     Str(MalStr),
     Ch(char),
-    Int(isize),
+    Num(Frac),
     Atom(Rc<RefCell<MalType>>),
     Nil,
     T,
@@ -37,9 +171,9 @@ impl Default for &MalType {
 }
 
 impl MalType {
-    pub fn if_number(&self) -> Result<isize, MalErr> {
+    pub fn if_number(&self) -> Result<Frac, MalErr> {
         match self {
-            Self::Int(val) => Ok(*val),
+            Self::Num(val) => Ok(val.clone()),
             _ => Err(MalErr::unrecoverable(
                 format!("{:?} is not a number", prt(self)).as_str(),
             )),
@@ -87,7 +221,7 @@ impl MalType {
             + match self {
                 M::Nil => "nil",
                 M::T => "t",
-                M::Int(_) => "int",
+                M::Num(_) => "number",
                 M::Fun(_, _) | M::MalFun { .. } => "lambda",
                 M::Key(_) => "key",
                 M::Str(_) => "string",
@@ -109,7 +243,7 @@ fn mal_compare(args: (&MalType, &MalType)) -> bool {
     match (args.0, args.1) {
         (M::Nil, M::Nil) => true,
         (M::T, M::T) => true,
-        (M::Int(a), M::Int(b)) => a == b,
+        (M::Num(a), M::Num(b)) => a == b,
         (M::Ch(a), M::Ch(b)) => a == b,
         (M::Key(a), M::Key(b)) | (M::Str(a), M::Str(b)) | (M::Sym(a), M::Sym(b)) => a == b,
         (M::List(a), M::List(b)) | (M::Vector(a), M::Vector(b)) => {

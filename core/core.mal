@@ -36,8 +36,8 @@
     (>= b a)))
 
 ; Other functions in core.rs
-(def! int? (fn* [a]
-    (= (type a) :int)))
+(def! num? (fn* [a]
+    (= (type a) :number)))
 
 (def! sym? (fn* [a]
     (= (type a) :symbol)))
