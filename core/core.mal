@@ -51,6 +51,12 @@
 (def! empty? (fn* [l]
     (= (count l) 0)))
 
+(def! ceil (fn* [n]
+    (if (= (num n) 1)
+        n
+        (+ (floor n) 1))))
+
+; Other functions
 (def! assert-msg (fn* [e m]
     (if (not e)
         (raise m))))

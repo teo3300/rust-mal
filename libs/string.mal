@@ -23,16 +23,18 @@
 (def! _split-ch (fn* [s c]
     "Split the string at every occurrence of character sc"
     (def! s (boom s))
-    (def! split-r (fn* [l t r]
+    (def! split-r (fn* [l tt r]
         (if (empty? l)
-            (cons t r)
+            (cons tt r)
             (do (def! cc (car l))
                 (if (= cc c)
-                    (split-r (cdr l) "" (cons t r))
-                    (split-r (cdr l) (str t cc) r))))))
+                    (split-r (cdr l) "" (cons tt r))
+                    (split-r (cdr l) (str tt cc) r))))))
     (reverse (split-r s "" '()))))
 
-(def! split-h (fn* [string delimiter]
+(def! split (fn* [string delimiter]
+    "Split the string at every occurrence of substring delimiter"
+    "An empty delimiter is splitting every character"
     (if (= (strlen delimiter) 1)
         (_split-ch string (char delimiter))
         (do (def! delimiter (boom delimiter))
@@ -48,20 +50,13 @@
                             (split-r string delimiter "" (str chunk matches curr) chunks)))))))
             (reverse (split-r (boom string) delimiter "" "" '()))))))
 
-(def! split (fn* [string delimiter]
-    "Split the string at every occurrence of substring delimiter"
-    "An empty delimiter is splitting every character"
-    (if (= (strlen delimiter) 0)
-        (cdr (split-h string delimiter))
-        (split-h string delimiter))))
-
 (def! join (fn* [l s]
     "Join element of list l to a stiring, using s as separator"
     (def! s (or s ""))
-    (def! join-r (fn* [l t]
+    (def! join-r (fn* [l tt]
         (if (empty? l)
-            t
-            (join-r (cdr l) (str t s (car l))))))
+            tt
+            (join-r (cdr l) (str tt s (car l))))))
     (join-r (cdr l) (car l))))
 
 (def! chsub (fn* [s c1 c2]
