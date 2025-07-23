@@ -71,7 +71,18 @@ use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
 
 pub fn pre_load(argv: &Vec<String>, env: &Env) {
-    eval_str(format!("(def! *ARGV* '({}))", argv[1..].iter().map(|x| x.to_string() + " ").collect::<String>()).as_str(), &env).unwrap();
+    eval_str(
+        format!(
+            "(def! *ARGV* '({}))",
+            argv[1..]
+                .iter()
+                .map(|x| "\"".to_string() + x + "\" ")
+                .collect::<String>()
+        )
+        .as_str(),
+        &env,
+    )
+    .unwrap();
 }
 
 pub fn interactive(env: Env) {
