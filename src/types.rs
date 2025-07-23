@@ -192,9 +192,9 @@ impl MalType {
 
     pub fn if_list(&self) -> Result<&[MalType], MalErr> {
         match self {
-            Self::List(list) => Ok(list),
+            Self::List(list) | Self::Vector(list) => Ok(list),
             _ => Err(MalErr::unrecoverable(
-                format!("{:?} is not a list", prt(self)).as_str(),
+                format!("{:?} is not an iterable", prt(self)).as_str(),
             )),
         }
     }

@@ -75,7 +75,7 @@ fn let_star_form(list: &[MalType], env: Env) -> Result<(MalType, Env), MalErr> {
     let inner_env = env_new(Some(env.clone()));
     // change the inner environment
     let (car, cdr) = car_cdr(list)?;
-    let list = car.if_vec()?;
+    let list = car.if_list()?;
     if list.len() % 2 != 0 {
         return Err(MalErr::unrecoverable(
             "let* form, number of arguments must be even",
@@ -114,7 +114,7 @@ fn if_form(list: &[MalType], env: Env) -> MalRet {
 
 fn fn_star_form(list: &[MalType], env: Env) -> MalRet {
     let (binds, exprs) = car_cdr(list)?;
-    binds.if_vec()?;
+    binds.if_list()?;
     Ok(M::MalFun {
         // eval: eval_ast,
         params: Rc::new(binds.clone()),

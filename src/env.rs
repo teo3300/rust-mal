@@ -57,7 +57,7 @@ pub fn env_get(env: &Env, sym: &str) -> MalRet {
 
 pub fn env_binds(outer: Env, binds: &MalType, exprs: &[MalType]) -> Result<Env, MalErr> {
     let env = env_new(Some(outer));
-    let binds = binds.if_vec()?;
+    let binds = binds.if_list()?;
     let binl = binds.len();
     let expl = exprs.len();
     if binl < expl {
@@ -150,13 +150,25 @@ pub fn call_func(func: &MalType, args: &[MalType]) -> CallRet {
 }
 
 pub fn any_zero(list: &[MalType]) -> Result<&[MalType], MalErr> {
-    if list
-        .iter()
-        .any(|x| matches!(x, M::Num(v) if v.exact_zero()))
-    {
-        return Err(MalErr::unrecoverable("Attempting division by 0"));
+    match list.len() {
+        1 => {
+            if list[0].if_number()?.get_num() == 0 {
+                Err(MalErr::unrecoverable("Attempting division by 0"))
+            } else {
+                Ok(list)
+            }
+        }
+        _ => {
+            if list[1..list.len()]
+                .iter()
+                .any(|x| matches!(x, M::Num(v) if v.exact_zero()))
+            {
+                Err(MalErr::unrecoverable("Attempting division by 0"))
+            } else {
+                Ok(list)
+            }
+        }
     }
-    Ok(list)
 }
 
 pub fn arithmetic_op(set: isize, f: fn(Frac, Frac) -> Frac, args: &[MalType]) -> MalRet {
