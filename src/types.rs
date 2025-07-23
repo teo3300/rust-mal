@@ -105,6 +105,10 @@ impl Frac {
         return a;
     }
 
+    // Ideally builtin functions ( + - * / ) can operate with the values in any
+    // form without problems, occasional simplification is done for numeric
+    // stability, ensure to simplify after insert and before using any funcition
+    // (floor, ceil, etc.)
     pub fn simplify(&self) -> Frac {
         // Euclid's algorithm to reduce fraction
         // TODO: (decide if implementing this automathically once fraction
@@ -130,13 +134,19 @@ impl Frac {
     // return Ok(Num(Frac::num(tk.parse::<isize>().unwrap())));
 
     pub fn from_str(tk: &str) -> Self {
-        match tk.find("/") {
+        let frac = match tk.find("/") {
             Some(v) => Self {
                 num: tk[0..v].parse::<isize>().unwrap(),
                 den: tk[v + 1..tk.len()].parse::<usize>().unwrap(),
             },
             None => Frac::num(tk.parse::<isize>().unwrap()),
-        }
+        };
+        // Ensure that value is simplified before being inserted
+        // otherwise
+        // (/ 4 4)  results in 1/1
+        // 4/4      results in 4/4
+        // this breaks some functions (like ceil) and doesn't make much sense
+        frac.simplify()
     }
 }
 
