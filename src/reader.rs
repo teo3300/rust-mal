@@ -83,7 +83,7 @@ impl Reader {
             "]" => Ok(Vector(vector.into())),
             "}" => make_map(vector.into()),
             t => Err(MalErr::unrecoverable(
-                format!("Unknown collection terminator: {}", t).as_str(),
+                format!("Unknown collection terminator: {t}").as_str(),
             )),
         }
     }
@@ -99,7 +99,12 @@ impl Reader {
                     .unwrap()
                     .is_match(tk)
                 {
-                    return Ok(Num(Frac::from_str(&tk)));
+                    return match Frac::from_str(tk) {
+                        Some(v) => Ok(Num(v)),
+                        None => Err(MalErr::unrecoverable(
+                            format!("Cannot parse {tk} as a number").as_str(),
+                        )),
+                    };
                 }
                 if tk.starts_with('\"') {
                     if tk.len() > 1 && tk.ends_with('\"') {
@@ -110,7 +115,7 @@ impl Reader {
                     ));
                 }
                 if tk.starts_with(':') {
-                    return Ok(Key(format!("ʞ{}", tk).into()));
+                    return Ok(Key(format!("ʞ{tk}").into()));
                 }
                 Ok(Sym(tk.into()))
             }
@@ -191,7 +196,7 @@ mod tests {
     fn reader_setup1() -> Reader {
         let r = Reader::new();
         r.push("()[]{} \"str\" :key sym 1 ; comment");
-        return r;
+        r
     }
 
     #[test]
@@ -255,7 +260,7 @@ mod tests {
         let r = reader_setup1();
         assert!(!r.ended());
         for _ in r.tokens.borrow().iter() {
-            assert!(matches!(r.next(), Ok(_)))
+            assert!(r.next().is_ok())
         }
         assert!(r.ended());
     }

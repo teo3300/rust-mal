@@ -3,7 +3,6 @@ use crate::types::MalErr;
 use crate::types::{Frac, MalMap, MalRet, MalType};
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::usize;
 
 #[derive(Clone)]
 pub struct EnvType {
@@ -16,8 +15,8 @@ impl EnvType {
         let mut keys = self
             .data
             .borrow()
-            .iter()
-            .map(|(k, _)| k.to_string())
+            .keys()
+            .map(|k| k.to_string())
             .collect::<Vec<String>>();
         keys.sort_unstable();
         keys
@@ -45,11 +44,11 @@ pub fn env_get(env: &Env, sym: &str) -> MalRet {
             return Ok(val.clone());
         }
         if let Some(outer) = &iter_env.outer {
-            iter_env = &outer;
+            iter_env = outer;
             continue;
         }
         return Err(MalErr::unrecoverable(
-            format!("symbol {:?} not defined", sym).as_str(),
+            format!("symbol {sym:?} not defined").as_str(),
         ));
     }
     // Recursive was prettier, but we hate recursion
@@ -62,7 +61,7 @@ pub fn env_binds(outer: Env, binds: &MalType, exprs: &[MalType]) -> Result<Env, 
     let expl = exprs.len();
     if binl < expl {
         return Err(MalErr::unrecoverable(
-            format!("Expected {} args, got {}", binl, expl).as_str(),
+            format!("Expected {binl} args, got {expl}").as_str(),
         ));
     }
     for (bind, expr) in binds.iter().zip(exprs.iter()) {
@@ -181,11 +180,11 @@ pub fn arithmetic_op(set: isize, f: fn(Frac, Frac) -> Frac, args: &[MalType]) ->
             for el in &args[1..] {
                 left = f(left, el.if_number()?);
 
-                const SIM_TRIG: usize = usize::isqrt(std::isize::MAX as usize);
+                const SIM_TRIG: usize = usize::isqrt(isize::MAX as usize);
 
                 // TODO: consider if simplifying at every operation or every N
                 //          or just at the end, no idea on how it scale
-                if std::cmp::max(left.get_num().abs() as usize, left.get_den()) > SIM_TRIG {
+                if std::cmp::max(left.get_num().unsigned_abs(), left.get_den()) > SIM_TRIG {
                     left = left.simplify();
                 }
             }

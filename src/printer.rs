@@ -56,7 +56,7 @@ pub fn pr_str(ast: &MalType, print_readably: bool) -> String {
         M::Atom(sub) => format!("Atom({})", pr_str(&sub.borrow(), print_readably)),
         M::Ch(c) => {
             if print_readably {
-                format!("#\\{}", c)
+                format!("#\\{c}")
             } else {
                 c.to_string()
             }

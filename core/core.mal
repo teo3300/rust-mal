@@ -51,6 +51,9 @@
 (def! empty? (fn* [l]
     (= (count l) 0)))
 
+(def! mod (fn* [a b]
+    (- a (* (floor (/ a b)) b))))
+
 (def! ceil (fn* [n]
     (if (= (num n) 1)
         n

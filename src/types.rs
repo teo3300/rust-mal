@@ -54,7 +54,7 @@ impl Div for Frac {
         let other_sign = other.num.signum();
         Self {
             num: self.num * other.den as isize * other_sign,
-            den: self.den * other.num.abs() as usize,
+            den: self.den * other.num.unsigned_abs(),
         }
     }
 }
@@ -68,14 +68,26 @@ impl PartialOrd for Frac {
 impl PartialEq for Frac {
     fn eq(&self, other: &Self) -> bool {
         (!((self.num < 0) ^ (other.num < 0)))
-            && self.num.abs() as usize * other.den == other.num.abs() as usize * self.den
+            && self.num.unsigned_abs() * other.den == other.num.unsigned_abs() * self.den
+    }
+}
+
+use std::fmt;
+
+impl fmt::Display for Frac {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.den == 1 {
+            write!(f, "{}", self.num)
+        } else {
+            write!(f, "{}/{}", self.num, self.den)
+        }
     }
 }
 
 impl Frac {
-    pub fn frac(num: isize, den: usize) -> Self {
-        Self { num, den }
-    }
+    //pub fn frac(num: isize, den: usize) -> Self {
+    //    Self { num, den }
+    //}
 
     pub fn num(num: isize) -> Self {
         Self { num, den: 1 }
@@ -95,14 +107,14 @@ impl Frac {
 
     fn _gcd(&self) -> usize {
         let mut t: usize;
-        let mut a = self.num.abs() as usize;
+        let mut a = self.num.unsigned_abs();
         let mut b = self.den;
         while b > 0 {
             t = b;
             b = a % b;
             a = t;
         }
-        return a;
+        a
     }
 
     // Ideally builtin functions ( + - * / ) can operate with the values in any
@@ -114,39 +126,45 @@ impl Frac {
         // TODO: (decide if implementing this automathically once fraction
         //          numbers become bigger than specified)
         let gcd = self._gcd();
-        return Frac {
+        Frac {
             num: self.num / gcd as isize,
             den: self.den / gcd,
-        };
+        }
     }
 
     pub fn int(&self) -> isize {
         self.num / self.den as isize
     }
 
-    pub fn to_string(&self) -> String {
-        let mut tmp = self.num.to_string();
-        if self.den != 1 {
-            tmp = tmp + "/" + &self.den.to_string()
-        }
-        return tmp;
-    }
     // return Ok(Num(Frac::num(tk.parse::<isize>().unwrap())));
 
-    pub fn from_str(tk: &str) -> Self {
+    pub fn from_str(tk: &str) -> Option<Self> {
         let frac = match tk.find("/") {
-            Some(v) => Self {
-                num: tk[0..v].parse::<isize>().unwrap(),
-                den: tk[v + 1..tk.len()].parse::<usize>().unwrap(),
-            },
-            None => Frac::num(tk.parse::<isize>().unwrap()),
+            Some(v) => {
+                let num = match tk[0..v].parse::<isize>() {
+                    Ok(v) => v,
+                    Err(_) => return None,
+                };
+                let den = match tk[v + 1..tk.len()].parse::<usize>() {
+                    Ok(v) => v,
+                    Err(_) => return None,
+                };
+                Self { num, den }
+            }
+            None => {
+                let num = match tk.parse::<isize>() {
+                    Ok(v) => v,
+                    Err(_) => return None,
+                };
+                Self::num(num)
+            }
         };
         // Ensure that value is simplified before being inserted
         // otherwise
         // (/ 4 4)  results in 1/1
         // 4/4      results in 4/4
         // this breaks some functions (like ceil) and doesn't make much sense
-        frac.simplify()
+        Some(frac.simplify())
     }
 }
 
@@ -183,7 +201,7 @@ impl Default for &MalType {
 impl MalType {
     pub fn if_number(&self) -> Result<Frac, MalErr> {
         match self {
-            Self::Num(val) => Ok(val.clone()),
+            Self::Num(val) => Ok(*val),
             _ => Err(MalErr::unrecoverable(
                 format!("{:?} is not a number", prt(self)).as_str(),
             )),

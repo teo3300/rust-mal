@@ -35,22 +35,21 @@ pub fn load_home_file(filename: &str, env: &Env, warn: bool) {
 
     if Path::new(&full_filename).exists() {
         if let Err(e) = load_file(&full_filename, env) {
-            eprintln!("; reading \"{}\":", full_filename);
+            eprintln!("; reading \"{full_filename}\":");
             eprintln!("{}", e.message());
         }
     } else if warn {
-        eprintln!("; WARNING: file \"{}\" does not exist", full_filename);
+        eprintln!("; WARNING: file \"{full_filename}\" does not exist");
     }
 }
 
 pub fn read_file(filename: &str) -> Result<MalStr, MalErr> {
-    let mut file = File::open(filename).map_err(|_| {
-        MalErr::unrecoverable(format!("Failed to open file '{}'", filename).as_str())
-    })?;
+    let mut file = File::open(filename)
+        .map_err(|_| MalErr::unrecoverable(format!("Failed to open file '{filename}'").as_str()))?;
     let mut content = String::new();
 
     file.read_to_string(&mut content).map_err(|_| {
-        MalErr::unrecoverable(format!("Failed to read content of '{}'", filename).as_str())
+        MalErr::unrecoverable(format!("Failed to read content of '{filename}'").as_str())
     })?;
 
     Ok(content.into())
@@ -58,11 +57,7 @@ pub fn read_file(filename: &str) -> Result<MalStr, MalErr> {
 
 pub fn load_file(filename: &str, env: &Env) -> MalRet {
     eval_str(
-        format!(
-            "(eval (read-string (str \"(do \" (slurp \"{}\") \"\nnil)\")))",
-            filename
-        )
-        .as_str(),
+        format!("(eval (read-string (str \"(do \" (slurp \"{filename}\") \"\nnil)\")))").as_str(),
         env,
     )
 } // WTF this is becoming ever less like rust and more like lisp, did I really completely skip the file reading?
@@ -70,7 +65,7 @@ pub fn load_file(filename: &str, env: &Env) -> MalRet {
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
 
-pub fn pre_load(argv: &Vec<String>, env: &Env) {
+pub fn pre_load(argv: &[String], env: &Env) {
     eval_str(
         format!(
             "(def! *ARGV* '({}))",
@@ -80,7 +75,7 @@ pub fn pre_load(argv: &Vec<String>, env: &Env) {
                 .collect::<String>()
         )
         .as_str(),
-        &env,
+        env,
     )
     .unwrap();
 }
@@ -89,7 +84,7 @@ pub fn interactive(env: Env) {
     const HISTORY: &str = ".mal-history";
     let home = get_home_path(&env).unwrap();
     let history = home + "/" + HISTORY;
-    eval_str(format!("(def! MAL_HISTORY \"{}\")", history).as_str(), &env).unwrap();
+    eval_str(format!("(def! MAL_HISTORY \"{history}\")").as_str(), &env).unwrap();
 
     // Using "Editor" instead of the standard I/O because I hate myself but not this much
     // TODO: remove unwrap and switch to a better error handling
@@ -118,14 +113,14 @@ pub fn interactive(env: Env) {
                     // TODO: should handle this in a different way
                     rl.add_history_entry(&line).unwrap_or_default();
                     rl.save_history(&history)
-                        .unwrap_or_else(|e| eprintln!("; WARNING: saving history: {}", e));
+                        .unwrap_or_else(|e| eprintln!("; WARNING: saving history: {e}"));
 
                     parser.push(&line);
 
                     // Perform rep on whole available input
                     match rep(&parser, &env) {
                         Ok(output) => output.iter().for_each(|el| {
-                            eprintln!("; [{}]> {}", num, el);
+                            eprintln!("; [{num}]> {el}");
                             num += 1;
                         }),
                         Err(error) => {
@@ -145,7 +140,7 @@ pub fn interactive(env: Env) {
                 }
                 Err(ReadlineError::Eof) => exit(0),
                 Err(err) => {
-                    eprint!("; Error reading lnie: {:?}", err);
+                    eprint!("; Error reading lnie: {err:?}");
                     break;
                 }
             }
