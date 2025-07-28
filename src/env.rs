@@ -127,7 +127,7 @@ pub fn call_func(func: &MalType, args: &[MalType]) -> CallRet {
                 _ => Err(MalErr::unrecoverable("Map argument must be string or key")),
             }
         }
-        M::Vector(v) => {
+        M::Vector(v) | M::List(v) => {
             if args.is_empty() {
                 return Err(MalErr::unrecoverable("No key provided to Vector construct"));
             }
